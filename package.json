@@ -1,0 +1,23 @@
+{
+  "name": "hokeyserver",
+  "version": "1.0.0",
+  "description": "A simple real-time global chat application built with Node.js, Express.js, and Socket.io.",
+  "main": "index.js",
+  "scripts": {
+    "test": "echo \"Error: no test specified\" && exit 1"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/SpeedyDuck790/HokeyServer.git"
+  },
+  "keywords": [],
+  "author": "",
+  "license": "ISC",
+  "bugs": {
+    "url": "https://github.com/SpeedyDuck790/HokeyServer/issues"
+  },
+  "homepage": "https://github.com/SpeedyDuck790/HokeyServer#readme",
+  "dependencies": {
+    "express": "^5.1.0"
+  }
+}

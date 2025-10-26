@@ -36,6 +36,3 @@ A simple real-time global chat application built with Node.js, Express.js, and S
 
 See [ROADMAP.md](./ROADMAP.md) for a step-by-step learning guide.
 
-## License
-
-MIT
