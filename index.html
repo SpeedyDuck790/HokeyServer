@@ -1,0 +1,36 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <title>Global Chat</title>
+</head>
+<body>
+  <h1>Welcome to the wild west of Global Chat</h1>
+<!-- Container for displaying chat messages -->
+<div id="messages"></div>
+<!-- Input field and button to send messages -->
+  <input id="messageInput" type="text" placeholder="Type a message..." />
+<!-- Send button to submit the message -->
+  <button onclick="sendMessage()">Send</button>
+<!-- JavaScript to handle sending messages -->
+  <script>
+    function sendMessage() {
+    // Get the user input and display it in the messages div
+      const UserInput = document.getElementById('messageInput');
+      const UserMessage = UserInput.value;
+      // Only add the message if it's not empty
+      if (UserMessage) {
+        // Append the message to the messages div
+        const messagesDiv = document.getElementById('messages');
+        // Create a new div for the message
+        const msgElem = document.createElement('div');
+        // Set the text content to the user's message
+        msgElem.textContent = UserMessage;
+        // Add the message element to the messages div
+        messagesDiv.appendChild(msgElem);
+        // Clear the input field after sending the message
+        UserInput.value = '';
+      }
+    }
+  </script>
+</body>
+</html>
