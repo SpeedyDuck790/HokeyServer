@@ -31,6 +31,17 @@
       }
     }
 
+    // Listen for message history from the server
+    socket.on('message history', function(history) {
+        const messagesDiv = document.getElementById('messages'); // Get the messages container
+        messagesDiv.innerHTML = ''; // Clear any existing messages
+        history.forEach(function(data) { // Iterate through message history into DOM
+            const msgElem = document.createElement('div');
+            msgElem.textContent = `${data.username}: ${data.userMsg}`;
+            messagesDiv.appendChild(msgElem);// Add the message to the container
+        });
+    });
+
     // Listen for messages from the server
     socket.on('chat message', function(msg) {
         const msgDiv = document.getElementById('messages');// Get the messages container
