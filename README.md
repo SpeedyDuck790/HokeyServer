@@ -4,7 +4,7 @@
 
 A real-time global chat application built with Node.js, Express.js, and Socket.io.
 ---
-![Chat App Screenshot](./assets/screenshot.png)
+<img src="./assets/firstdemodeploy.png" alt="Chat Screenshot" width="200" />
 ---
 
 ## Features
