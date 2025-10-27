@@ -5,11 +5,18 @@
 </head>
 <body>
   <h1>Welcome to the wild west of Global Chat</h1>
-<!-- Container for displaying chat messages -->
-<div id="messages"></div>
-<!-- Input field and button to send messages -->
+  <!-- Online users box -->
+  <div style="margin-bottom:10px;">
+    <button id="onlineUsersBtn" onclick="toggleUserDropdown()">
+      <span id="onlineCount">0</span> online
+    </button>
+    <div id="userDropdown" style="display:none; border:1px solid #ccc; background:#fff; position:absolute; z-index:10; min-width:120px;"></div>
+  </div>
+  <!-- Container for displaying chat messages -->
+  <div id="messages"></div>
+  <!-- Input field and button to send messages -->
   <input id="messageInput" type="text" placeholder="Type a message..." />
-<!-- Send button to submit the message -->
+  <!-- Send button to submit the message -->
   <button onclick="sendMessage()">Send</button>
 <!-- Include Socket.io client library -->
 <script src="/socket.io/socket.io.js"></script>
@@ -31,6 +38,25 @@
       }
     }
 
+    // --- Online users dropdown ---
+    function toggleUserDropdown() {
+      const dropdown = document.getElementById('userDropdown');
+      dropdown.style.display = dropdown.style.display === 'none' ? 'block' : 'none';
+    }
+
+    // Listen for user list updates from the server
+    socket.on('user list', function(userList) {
+      document.getElementById('onlineCount').textContent = userList.length;
+      const dropdown = document.getElementById('userDropdown');
+      dropdown.innerHTML = '';
+      userList.forEach(function(user) {
+        const userElem = document.createElement('div');
+        userElem.textContent = user;
+        userElem.style.padding = '4px 8px';
+        dropdown.appendChild(userElem);
+      });
+    });
+
     // Listen for message history from the server
     socket.on('message history', function(history) {
         const messagesDiv = document.getElementById('messages'); // Get the messages container
@@ -48,6 +74,11 @@
         const msgElem = document.createElement('div');// Create a new div for the message
         msgElem.textContent = `${msg.username}: ${msg.userMsg}`;// Set the message text with username
         msgDiv.appendChild(msgElem);// Add the message to the container
+    });
+
+    // On connect, send username to server for user list
+    socket.on('connect', function() {
+      socket.emit('register user', username);
     });
   </script>
 

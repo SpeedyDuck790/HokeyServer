@@ -18,9 +18,20 @@ app.get('/', (req, res) => {
 const msgHistoryKept = true; // Set to false to disable message history
 let msgHistory = []; // Array to store message history
 
-// Listen for Socket.io connections
+// --- User tracking for online users ---
+let onlineUsers = {};
+
 io.on('connection', (socket) => {
   console.log('A user connected');
+
+  // Listen for user registration
+  socket.on('register user', (username) => {//This listens for a message called 'register user' from a client
+// Each connected client gets a unique ID (socket.id).
+// This line saves the username for that client’s ID in the onlineUsers object.
+// Example: If two users join, onlineUsers might look like { 'abc123': 'Alice', 'def456': 'Bob' }.
+    onlineUsers[socket.id] = username;
+    io.emit('user list', Object.values(onlineUsers));// Broadcast updated user list
+  });
 
   // Send message history to the new client if enabled
   if (msgHistoryKept) {
@@ -44,6 +55,8 @@ io.on('connection', (socket) => {
   // Handle client disconnection
   socket.on('disconnect', () => {
     console.log('A user disconnected');
+    delete onlineUsers[socket.id];
+    io.emit('user list', Object.values(onlineUsers));
   });
 });
 
