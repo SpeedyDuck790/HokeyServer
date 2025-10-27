@@ -74,7 +74,8 @@ io.on('connection', (socket) => {
 
 // Start the server
 const isLocal = process.argv[2] !== 'ip';
-const host = isLocal ? 'localhost' : '0.0.0.0';
+const isRender = !!process.env.RENDER;
+const host = isRender ? '0.0.0.0' : (isLocal ? 'localhost' : '0.0.0.0');
 
 // Get local IP address
 function getLocalIP() {
