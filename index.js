@@ -3,12 +3,13 @@ const path = require('path');
 const http = require('http');
 const { Server } = require('socket.io');
 const os = require('os');
+const { exec } = require('child_process');
 
 const app = express(); // Express is a web framework that simplifies server creation
 const server = http.createServer(app); // Create HTTP server
 const io = new Server(server); // Attach Socket.io to the server
 
-const PORT = 3000;// Port number for the server
+const PORT = 8080;// Port number for the server
 
 // Serve static files from the current directory
 app.get('/', (req, res) => {
@@ -79,13 +80,29 @@ const host = isLocal ? 'localhost' : '0.0.0.0';
 function getLocalIP() {
   const interfaces = os.networkInterfaces();
   for (const name of Object.keys(interfaces)) {
-    for (const interface of interfaces[name]) {
-      if (interface.family === 'IPv4' && !interface.internal) {
-        return interface.address;
+    for (const iface of interfaces[name]) {
+      if (iface.family === 'IPv4' && !iface.internal) {
+        return iface.address;
       }
     }
   }
   return 'localhost';
+}
+
+// Add firewall rule for Windows if running in IP mode
+function addFirewallRule(port) {
+  const cmd = `netsh advfirewall firewall add rule name=\"Node.js Chat Port ${port}\" dir=in action=allow protocol=TCP localport=${port}`;
+  exec(cmd, (error, stdout, stderr) => {
+    if (error) {
+      console.log('Firewall rule may require admin rights or already exists.');
+    } else {
+      console.log('Firewall rule added:', stdout);
+    }
+  });
+}
+
+if (process.platform === 'win32' && !isLocal) {
+  addFirewallRule(PORT);
 }
 
 server.listen(PORT, host, () => {
