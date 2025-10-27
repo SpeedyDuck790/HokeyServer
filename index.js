@@ -2,6 +2,7 @@ const express = require('express');
 const path = require('path');
 const http = require('http');
 const { Server } = require('socket.io');
+const os = require('os');
 
 const app = express(); // Express is a web framework that simplifies server creation
 const server = http.createServer(app); // Create HTTP server
@@ -71,6 +72,26 @@ io.on('connection', (socket) => {
 });
 
 // Start the server
-server.listen(PORT, () => {
-  console.log(`Server is listening on http://localhost:${PORT}`);
+const isLocal = process.argv[2] !== 'ip';
+const host = isLocal ? 'localhost' : '0.0.0.0';
+
+// Get local IP address
+function getLocalIP() {
+  const interfaces = os.networkInterfaces();
+  for (const name of Object.keys(interfaces)) {
+    for (const interface of interfaces[name]) {
+      if (interface.family === 'IPv4' && !interface.internal) {
+        return interface.address;
+      }
+    }
+  }
+  return 'localhost';
+}
+
+server.listen(PORT, host, () => {
+  const localIP = getLocalIP();
+  console.log(`Server running on http://${host}:${PORT}`);
+  if (!isLocal) {
+    console.log(`Network access: http://${localIP}:${PORT}`);
+  }
 });
