@@ -30,49 +30,72 @@
     // Function to send a message to the server
     function sendMessage() {
         const userInput = document.getElementById('messageInput');// Get the input field
-        const userMsg = userInput.value;
+        let userMsg = userInput.value;
+        
+        userMsg = userMsg.trim(); // Trim whitespace
 
-        if (userMsg) { // Check if message is not empty
-            socket.emit('chat message',{username, userMsg}); // Send message and local username to server
-            userInput.value = '';// Clear input field
-      }
+        if (!userMsg) {// Check for empty message
+            alert("Message cannot be empty!");
+            return;
+        }
+        if (userMsg.length > 200) {// Check for message length
+            alert("Message too long! (max 200 characters)");
+            return;
+        }
+       
+         // Sanitize: escape < and > to prevent HTML injection
+         userMsg = userMsg.replace(/</g, "&lt;").replace(/>/g, "&gt;");
+
+         // Add timestamp (ISO string)
+        const timestamp = new Date().toISOString();
+
+        socket.emit('chat message',{username, userMsg, timestamp}); // Send message and local username to server
+        userInput.value = '';// Clear input field
     }
 
     // --- Online users dropdown ---
     function toggleUserDropdown() {
       const dropdown = document.getElementById('userDropdown');
-      dropdown.style.display = dropdown.style.display === 'none' ? 'block' : 'none';
+      dropdown.style.display = dropdown.style.display === 'none' ? 'block' : 'none';// Toggle dropdown visibility
     }
 
     // Listen for user list updates from the server
     socket.on('user list', function(userList) {
-      document.getElementById('onlineCount').textContent = userList.length;
-      const dropdown = document.getElementById('userDropdown');
+      document.getElementById('onlineCount').textContent = userList.length;// Update online user count
+      const dropdown = document.getElementById('userDropdown');// Get the dropdown container
       dropdown.innerHTML = '';
-      userList.forEach(function(user) {
+      userList.forEach(function(user) {// Iterate through users
         const userElem = document.createElement('div');
         userElem.textContent = user;
         userElem.style.padding = '4px 8px';
-        dropdown.appendChild(userElem);
+        dropdown.appendChild(userElem);// Add user to dropdown
       });
     });
 
-    // Listen for message history from the server
-    socket.on('message history', function(history) {
-        const messagesDiv = document.getElementById('messages'); // Get the messages container
-        messagesDiv.innerHTML = ''; // Clear any existing messages
-        history.forEach(function(data) { // Iterate through message history into DOM
-            const msgElem = document.createElement('div');
-            msgElem.textContent = `${data.username}: ${data.userMsg}`;
-            messagesDiv.appendChild(msgElem);// Add the message to the container
-        });
+  // Listen for message history from the server
+  socket.on('message history', function(history) {
+    const messagesDiv = document.getElementById('messages'); // Get the messages container
+    messagesDiv.innerHTML = ''; // Clear any existing messages
+    history.forEach(function(data) { // Iterate through message history into DOM
+      const msgElem = document.createElement('div');
+      const time = data.timestamp ? new Date(data.timestamp).toLocaleTimeString() : '';
+      msgElem.textContent = `[${time}] ${data.username}: ${data.userMsg}`;
+      messagesDiv.appendChild(msgElem);// Add the message to the container
+    });
+  });
+    // Allow sending message with Enter key
+    document.getElementById('messageInput').addEventListener('keydown', function(event) {
+      if (event.key === 'Enter') {// Check for Enter key for sending message
+        sendMessage();
+      }
     });
 
     // Listen for messages from the server
     socket.on('chat message', function(msg) {
         const msgDiv = document.getElementById('messages');// Get the messages container
         const msgElem = document.createElement('div');// Create a new div for the message
-        msgElem.textContent = `${msg.username}: ${msg.userMsg}`;// Set the message text with username
+        const time = msg.timestamp ? new Date(msg.timestamp).toLocaleTimeString() : '';// Format timestamp (e.g., HH:MM:SS)
+        msgElem.textContent = `[${time}] ${msg.username}: ${msg.userMsg}`;// Set the message text with username
         msgDiv.appendChild(msgElem);// Add the message to the container
     });
 

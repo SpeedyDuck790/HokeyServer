@@ -40,6 +40,16 @@ io.on('connection', (socket) => {
 
   // Listen for chat messages from this client
   socket.on('chat message', (data) => {
+    // Server-side validation
+    if (
+        typeof data.userMsg !== 'string' ||
+        !data.userMsg.trim() ||
+        data.userMsg.length > 200
+    ) {
+        return; // Ignore invalid messages
+    }
+    // Sanitize
+    data.userMsg = data.userMsg.replace(/</g, "&lt;").replace(/>/g, "&gt;");
     // Store message if enabled
     if (msgHistoryKept) {
       msgHistory.push(data);
