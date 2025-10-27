@@ -1,0 +1,58 @@
+
+/*
+  Global CSS Variables for easy theming and settings
+  You can change these with JavaScript for user settings
+*/
+:root {
+  --bg-color: #fff;           /* Background color */
+  --text-color: #222;         /* Main text color */
+  --font-size: 16px;          /* Base font size */
+  --header-color: #111;       /* Header color */
+  --user-list-bg: #f0f0f0;    /* User dropdown background */
+}
+
+/* Main page styles */
+body {
+  background: var(--bg-color);
+  color: var(--text-color);
+  font-size: var(--font-size);
+  font-family: Arial, sans-serif;
+  margin: 0;
+  padding: 0 10px;
+}
+
+/* Chat title */
+h1 {
+  color: var(--header-color);
+}
+
+/* Online users dropdown */
+#userDropdown {
+  background: var(--user-list-bg);
+  border-radius: 4px;
+}
+
+/* Chat messages area */
+#messages {
+  margin-bottom: 10px;
+  min-height: 200px;
+  max-height: 400px;
+  overflow-y: auto;
+  border: 1px solid #ccc;
+  padding: 8px;
+  background: #fafafa;
+}
+
+/* Message input box */
+#messageInput {
+  width: 70%;
+  padding: 6px;
+  font-size: 1em;
+}
+
+/* Buttons (send, theme, etc.) */
+button {
+  padding: 6px 12px;
+  font-size: 1em;
+  margin-left: 4px;
+}

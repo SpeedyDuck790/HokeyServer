@@ -2,9 +2,23 @@
 <html>
 <head>
   <title>Global Chat</title>
+  <link rel="stylesheet" href="assets/style.css">
 </head>
 <body>
   <h1>Welcome to the wild west of Global Chat</h1>
+  <!-- Settings menu -->
+  <div style="margin-bottom:10px;">
+    <button onclick="setTheme('#fff','#222')">Light</button>
+    <button onclick="setTheme('#222','#fff')">Dark</button>
+    <label>Font size:
+      <select onchange="setFontSize(this.value)">
+        <option value="14">14px</option>
+        <option value="16" selected>16px</option>
+        <option value="18">18px</option>
+        <option value="20">20px</option>
+      </select>
+    </label>
+  </div>
   <!-- Online users box -->
   <div style="margin-bottom:10px;">
     <button id="onlineUsersBtn" onclick="toggleUserDropdown()">
@@ -26,6 +40,16 @@
     let username = prompt("Enter your username:");//get a local username from the user
     if (!username) username = "Anon";
     const socket = io(); // Connect to the server
+
+    // --- Settings functions ---
+    function setTheme(bg, text) {
+      document.documentElement.style.setProperty('--bg-color', bg);
+      document.documentElement.style.setProperty('--text-color', text);
+      document.documentElement.style.setProperty('--header-color', text);
+    }
+    function setFontSize(size) {
+      document.documentElement.style.setProperty('--font-size', size + 'px');
+    }
 
     // Function to send a message to the server
     function sendMessage() {
