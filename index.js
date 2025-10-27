@@ -9,7 +9,7 @@ const app = express(); // Express is a web framework that simplifies server crea
 const server = http.createServer(app); // Create HTTP server
 const io = new Server(server); // Attach Socket.io to the server
 
-const PORT = 8080;// Port number for the server
+const PORT = process.env.PORT || 8080; // Use Render's assigned port or default to 8080
 
 // Serve static files from the current directory
 app.get('/', (req, res) => {
