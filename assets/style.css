@@ -3,56 +3,183 @@
   Global CSS Variables for easy theming and settings
   You can change these with JavaScript for user settings
 */
+
 :root {
   --bg-color: #fff;           /* Background color */
   --text-color: #222;         /* Main text color */
   --font-size: 16px;          /* Base font size */
   --header-color: #111;       /* Header color */
   --user-list-bg: #f0f0f0;    /* User dropdown background */
+  --messages-bg: #fafafa;     /* Messages box background */
+  --button-bg: #007bff;       /* Button background - blue for light mode */
+  --button-text: #fff;        /* Button text color */
 }
 
-/* Main page styles */
+
 body {
   background: var(--bg-color);
   color: var(--text-color);
-  font-size: var(--font-size);
   font-family: Arial, sans-serif;
   margin: 0;
-  padding: 0 10px;
+  padding: 10px;
+  max-width: 800px;
+  margin: 0 auto;
+  min-height: 100vh;
+  box-sizing: border-box;
 }
 
-/* Chat title */
+/* Container for the entire app */
+.chat-container {
+  display: flex;
+  flex-direction: column;
+  height: 100vh;
+  max-height: 100vh;
+}
+
+/* Header section */
+.header {
+  text-align: center;
+  margin-bottom: 20px;
+  padding: 20px 0;
+}
+
+/* Chat title with dynamic coloring */
 h1 {
   color: var(--header-color);
+  margin: 0;
+  font-size: 2.5em;
+  font-weight: bold;
+  text-shadow: 2px 2px 4px rgba(0,0,0,0.1);
+}
+
+.hokey {
+  color: var(--button-bg); /* Uses theme button color (blue/purple) */
+}
+
+.chat {
+  color: var(--text-color);
+}
+
+/* Subtitle */
+.subtitle {
+  margin: 10px 0 0 0;
+  font-style: italic;
+  opacity: 0.8;
+  font-size: 1.1em;
+  color: var(--text-color);
+}
+
+/* Settings and controls area */
+.controls {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 10px;
+  margin-bottom: 15px;
+  align-items: center;
+  justify-content: space-between;
 }
 
 /* Online users dropdown */
 #userDropdown {
   background: var(--user-list-bg);
   border-radius: 4px;
+  max-height: 150px;
+  overflow-y: auto;
 }
 
 /* Chat messages area */
 #messages {
-  margin-bottom: 10px;
-  min-height: 200px;
-  max-height: 400px;
+  flex: 1;
+  margin-bottom: 15px;
+  min-height: 300px;
+  max-height: 60vh;
   overflow-y: auto;
   border: 1px solid #ccc;
-  padding: 8px;
-  background: #fafafa;
+  padding: 12px;
+  background: var(--messages-bg);
+  border-radius: 8px;
+  word-wrap: break-word;
+}
+
+/* Input area */
+.input-area {
+  display: flex;
+  gap: 8px;
+  margin-top: 0;
+  padding-top: 0;
 }
 
 /* Message input box */
 #messageInput {
-  width: 70%;
-  padding: 6px;
+  flex: 1;
+  padding: 12px;
   font-size: 1em;
+  border: 1px solid #ccc;
+  border-radius: 6px;
+  box-sizing: border-box;
 }
 
 /* Buttons (send, theme, etc.) */
 button {
-  padding: 6px 12px;
+  padding: 8px 16px;
   font-size: 1em;
-  margin-left: 4px;
+  background: var(--button-bg);
+  color: var(--button-text);
+  border: none;
+  border-radius: 6px;
+  cursor: pointer;
+  white-space: nowrap;
+  min-width: 60px;
+}
+
+button:hover {
+  opacity: 0.8;
+}
+
+/* Mobile responsive design */
+@media (max-width: 768px) {
+  body {
+    padding: 5px;
+  }
+  
+  .header {
+    padding: 15px 0;
+    margin-bottom: 15px;
+  }
+  
+  h1 {
+    font-size: 2em;
+  }
+  
+  .subtitle {
+    font-size: 1em;
+  }
+  
+  .controls {
+    flex-direction: column;
+    align-items: stretch;
+    gap: 8px;
+  }
+  
+  #messages {
+    min-height: 250px;
+    max-height: 50vh;
+    padding: 8px;
+  }
+  
+  .input-area {
+    flex-direction: column;
+    gap: 8px;
+  }
+  
+  #messageInput {
+    padding: 15px;
+    font-size: 16px; /* Prevents zoom on iOS */
+  }
+  
+  button {
+    padding: 12px;
+    font-size: 1.1em;
+    width: 100%;
+  }
 }

@@ -1,37 +1,41 @@
 <!DOCTYPE html>
 <html>
 <head>
-  <title>Global Chat</title>
+  <title>HokeyChat</title>
   <link rel="stylesheet" href="assets/style.css">
 </head>
 <body>
-  <h1>Welcome to the wild west of Global Chat</h1>
-  <!-- Settings menu -->
-  <div style="margin-bottom:10px;">
-    <button onclick="setTheme('#fff','#222')">Light</button>
-    <button onclick="setTheme('#222','#fff')">Dark</button>
-    <label>Font size:
-      <select onchange="setFontSize(this.value)">
-        <option value="14">14px</option>
-        <option value="16" selected>16px</option>
-        <option value="18">18px</option>
-        <option value="20">20px</option>
-      </select>
-    </label>
+  <div class="chat-container">
+    <!-- Main Page Title and Subtitle-->
+    <div class="header">
+      <h1><span class="hokey">Hokey</span><span class="chat">Chat</span></h1>
+      <p class="subtitle">Wild west chatrooms as if it's the 90s</p>
+    </div>
+    
+    <div class="controls">
+      <!-- Settings menu -->
+      <div>
+        <button id="themeToggle" onclick="toggleTheme()" title="Toggle light/dark mode">🌙</button>
+      </div>
+      
+      <!-- Online users box -->
+      <div>
+        <button id="onlineUsersBtn" onclick="toggleUserDropdown()">
+          <span id="onlineCount">0</span> online
+        </button>
+        <div id="userDropdown" style="display:none; border:1px solid #ccc; position:absolute; z-index:10; min-width:120px;"></div>
+      </div>
+    </div>
+    
+    <!-- Container for displaying chat messages -->
+    <div id="messages"></div>
+    
+    <!-- Input area -->
+    <div class="input-area">
+      <input id="messageInput" type="text" placeholder="Type a message..." />
+      <button onclick="sendMessage()">Send</button>
+    </div>
   </div>
-  <!-- Online users box -->
-  <div style="margin-bottom:10px;">
-    <button id="onlineUsersBtn" onclick="toggleUserDropdown()">
-      <span id="onlineCount">0</span> online
-    </button>
-    <div id="userDropdown" style="display:none; border:1px solid #ccc; background:#fff; position:absolute; z-index:10; min-width:120px;"></div>
-  </div>
-  <!-- Container for displaying chat messages -->
-  <div id="messages"></div>
-  <!-- Input field and button to send messages -->
-  <input id="messageInput" type="text" placeholder="Type a message..." />
-  <!-- Send button to submit the message -->
-  <button onclick="sendMessage()">Send</button>
 <!-- Include Socket.io client library -->
 <script src="/socket.io/socket.io.js"></script>
 <!-- JavaScript to handle sending messages -->
@@ -41,15 +45,36 @@
     if (!username) username = "Anon";
     const socket = io(); // Connect to the server
 
-    // --- Settings functions ---
-    function setTheme(bg, text) {
-      document.documentElement.style.setProperty('--bg-color', bg);
-      document.documentElement.style.setProperty('--text-color', text);
-      document.documentElement.style.setProperty('--header-color', text);
+  // --- Theme toggle ---
+  let isDark = false;
+  function setTheme(bg, text) {
+    document.documentElement.style.setProperty('--bg-color', bg);
+    document.documentElement.style.setProperty('--text-color', text);
+    document.documentElement.style.setProperty('--header-color', text);
+    if (bg === '#222') {
+      // Dark mode
+      document.documentElement.style.setProperty('--user-list-bg', '#333');
+      document.documentElement.style.setProperty('--messages-bg', '#222');
+      document.documentElement.style.setProperty('--button-bg', '#8e44ad'); // Purple for dark mode
+    } else {
+      // Light mode
+      document.documentElement.style.setProperty('--user-list-bg', '#f0f0f0');
+      document.documentElement.style.setProperty('--messages-bg', '#fafafa');
+      document.documentElement.style.setProperty('--button-bg', '#007bff'); // Blue for light mode
     }
-    function setFontSize(size) {
-      document.documentElement.style.setProperty('--font-size', size + 'px');
+  }
+  function toggleTheme() {
+    isDark = !isDark;
+    if (isDark) {
+      setTheme('#222', '#fff');
+      document.getElementById('themeToggle').textContent = '☀️';
+    } else {
+      setTheme('#fff', '#222');
+      document.getElementById('themeToggle').textContent = '🌙';
     }
+  }
+  // Set initial theme
+  setTheme('#fff', '#222');
 
     // Function to send a message to the server
     function sendMessage() {

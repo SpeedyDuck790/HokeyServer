@@ -11,7 +11,10 @@ const io = new Server(server); // Attach Socket.io to the server
 
 const PORT = process.env.PORT || 8080; // Use Render's assigned port or default to 8080
 
-// Serve static files from the current directory
+// Serve static files from the assets directory (for CSS, images, etc.)
+app.use('/assets', express.static(path.join(__dirname, 'assets')));
+
+// Serve index.html at root
 app.get('/', (req, res) => {
   res.sendFile(path.join(__dirname, 'index.html'));
 });
