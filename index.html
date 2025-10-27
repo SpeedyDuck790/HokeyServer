@@ -23,20 +23,20 @@
     // Function to send a message to the server
     function sendMessage() {
         const userInput = document.getElementById('messageInput');// Get the input field
-        const userMessage = userInput.value;
+        const userMsg = userInput.value;
 
-        if (userMessage) { // Check if message is not empty
-            socket.emit('chat message',{username, userMessage}); // Send message and local usernameto server
+        if (userMsg) { // Check if message is not empty
+            socket.emit('chat message',{username, userMsg}); // Send message and local username to server
             userInput.value = '';// Clear input field
       }
     }
 
     // Listen for messages from the server
     socket.on('chat message', function(msg) {
-        const messagesDiv = document.getElementById('messages');// Get the messages container
+        const msgDiv = document.getElementById('messages');// Get the messages container
         const msgElem = document.createElement('div');// Create a new div for the message
-        msgElem.textContent = `${msg.username}: ${msg.userMessage}`;// Set the message text with username
-        messagesDiv.appendChild(msgElem);// Add the message to the container
+        msgElem.textContent = `${msg.username}: ${msg.userMsg}`;// Set the message text with username
+        msgDiv.appendChild(msgElem);// Add the message to the container
     });
   </script>
 

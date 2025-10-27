@@ -34,5 +34,5 @@ A simple real-time global chat application built with Node.js, Express.js, and S
 
 ## Learning Roadmap
 
-See [ROADMAP.md](./ROADMAP.md) for a step-by-step learning guide.
+See [ROADMAP.pdf](./ROADMAP.pdf) for a step-by-step learning guide of this app.
 

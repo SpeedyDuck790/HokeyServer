@@ -14,19 +14,33 @@ app.get('/', (req, res) => {
   res.sendFile(path.join(__dirname, 'index.html'));
 });
 
+// --- Message history feature ---
+const msgHistoryKept = true; // Set to false to disable message history
+let msgHistory = []; // Array to store message history
+
 // Listen for Socket.io connections
-// When a client connects
-// Set up event listeners for that client
-// Broadcast messages to all connected clients
 io.on('connection', (socket) => {
-    console.log('A user connected');
+  console.log('A user connected');
+
+  // Send message history to the new client if enabled
+  if (msgHistoryKept) {
+    socket.emit('message history', msgHistory);
+  }
 
   // Listen for chat messages from this client
   socket.on('chat message', (data) => {
+    // Store message if enabled
+    if (msgHistoryKept) {
+      msgHistory.push(data);
+      // Limit history size eg to last 100 messages
+      if (msgHistory.length > 100) {
+        msgHistory.shift();
+      }
+    }
     // Broadcast the message to all clients
     io.emit('chat message', data);
   });
-  
+
   // Handle client disconnection
   socket.on('disconnect', () => {
     console.log('A user disconnected');
