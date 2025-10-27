@@ -11,26 +11,31 @@
   <input id="messageInput" type="text" placeholder="Type a message..." />
 <!-- Send button to submit the message -->
   <button onclick="sendMessage()">Send</button>
+<!-- Include Socket.io client library -->
+<script src="/socket.io/socket.io.js"></script>
 <!-- JavaScript to handle sending messages -->
   <script>
+    const socket = io(); // Connect to the server
+
+    // Function to send a message to the server
     function sendMessage() {
-    // Get the user input and display it in the messages div
-      const UserInput = document.getElementById('messageInput');
-      const UserMessage = UserInput.value;
-      // Only add the message if it's not empty
-      if (UserMessage) {
-        // Append the message to the messages div
-        const messagesDiv = document.getElementById('messages');
-        // Create a new div for the message
-        const msgElem = document.createElement('div');
-        // Set the text content to the user's message
-        msgElem.textContent = UserMessage;
-        // Add the message element to the messages div
-        messagesDiv.appendChild(msgElem);
-        // Clear the input field after sending the message
-        UserInput.value = '';
+        const UserInput = document.getElementById('messageInput');// Get the input field
+        const UserMessage = UserInput.value;
+      
+        if (UserMessage) { // Check if message is not empty
+            socket.emit('chat message', UserMessage); // Send message to server
+            UserInput.value = '';// Clear input field
       }
     }
+
+    // Listen for messages from the server
+    socket.on('chat message', function(msg) {
+        const messagesDiv = document.getElementById('messages');// Get the messages container
+        const msgElem = document.createElement('div');// Create a new div for the message
+        msgElem.textContent = msg;// Set the message text
+        messagesDiv.appendChild(msgElem);// Add the message to the container
+    });
   </script>
+
 </body>
 </html>
