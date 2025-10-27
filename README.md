@@ -1,10 +1,11 @@
 
 
 # HokeyChat
+### by James Hill
 
 A real-time global chat application built with Node.js, Express.js, and Socket.io.
 ---
-![Chat App Screenshot](./assets/screenshot.png)
+![Chat App Screenshot](./assets/firstdemodeploy.png)
 ---
 
 ## Features
@@ -49,12 +50,4 @@ HokeyServer/
 ├── .gitignore       # Files/folders to ignore in git 
 └── README.md        # This file
 ```
-
----
-
-## Author
-
-James Hill
-
----
 
