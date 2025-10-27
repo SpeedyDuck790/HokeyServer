@@ -15,16 +15,19 @@
 <script src="/socket.io/socket.io.js"></script>
 <!-- JavaScript to handle sending messages -->
   <script>
+    //prompt is a built-in function that displays a dialog box that prompts the user for input.
+    let username = prompt("Enter your username:");//get a local username from the user
+    if (!username) username = "Anon";
     const socket = io(); // Connect to the server
 
     // Function to send a message to the server
     function sendMessage() {
-        const UserInput = document.getElementById('messageInput');// Get the input field
-        const UserMessage = UserInput.value;
-      
-        if (UserMessage) { // Check if message is not empty
-            socket.emit('chat message', UserMessage); // Send message to server
-            UserInput.value = '';// Clear input field
+        const userInput = document.getElementById('messageInput');// Get the input field
+        const userMessage = userInput.value;
+
+        if (userMessage) { // Check if message is not empty
+            socket.emit('chat message',{username, userMessage}); // Send message and local usernameto server
+            userInput.value = '';// Clear input field
       }
     }
 
@@ -32,7 +35,7 @@
     socket.on('chat message', function(msg) {
         const messagesDiv = document.getElementById('messages');// Get the messages container
         const msgElem = document.createElement('div');// Create a new div for the message
-        msgElem.textContent = msg;// Set the message text
+        msgElem.textContent = `${msg.username}: ${msg.userMessage}`;// Set the message text with username
         messagesDiv.appendChild(msgElem);// Add the message to the container
     });
   </script>
