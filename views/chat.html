@@ -1,0 +1,424 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title id="pageTitle">HokeyChat</title>
+  <link rel="stylesheet" href="/assets/style.css">
+</head>
+<body>
+  <div class="chat-container">
+    <!-- Main Page Title and Subtitle-->
+    <div class="header">
+      <h1><span class="hokey">Hokey</span><span class="chat" id="roomTitle">Chat</span></h1>
+      <p class="subtitle">Wild west chatrooms as if it's the 90s</p>
+    </div>
+    
+    <div class="controls">
+      <!-- Settings menu -->
+      <div>
+        <button id="themeToggle" onclick="toggleTheme()" title="Toggle light/dark mode">🌙</button>
+        <button id="roomMenuToggle" onclick="toggleRoomMenu()" title="Show/Hide Rooms">🏠 Rooms ▼</button>
+      </div>
+      
+      <!-- Online users box -->
+      <div>
+        <button id="onlineUsersBtn" onclick="toggleUserDropdown()">
+          <span id="onlineCount">0</span> online
+        </button>
+        <div id="userDropdown" class="dropdown-menu"></div>
+      </div>
+    </div>
+    
+    <!-- Top dropdown menu for rooms -->
+    <div id="roomDropdown" class="room-dropdown">
+      <!-- Create room section -->
+      <div class="dropdown-section">
+        <h3>Create Room</h3>
+        <form id="createRoomForm" onsubmit="createRoom(event)">
+          <input 
+            type="text" 
+            id="roomName" 
+            placeholder="Room name" 
+            maxlength="50" 
+            required 
+          />
+          <input 
+            type="text" 
+            id="roomDescription" 
+            placeholder="Description (optional)" 
+            maxlength="200" 
+          />
+          <input 
+            type="password" 
+            id="roomPassword" 
+            placeholder="Password (optional)" 
+            maxlength="50" 
+          />
+          <label>
+            <input type="checkbox" id="saveToDatabase" checked />
+            Save messages to database
+          </label>
+          <button type="submit">Create Room</button>
+        </form>
+      </div>
+      
+      <!-- Room list -->
+      <div class="dropdown-section">
+        <h3>Available Rooms</h3>
+        <div id="roomList" class="dropdown-room-list">
+          <!-- Rooms will be loaded here -->
+        </div>
+      </div>
+    </div>
+    
+    <!-- Container for displaying chat messages -->
+    <div id="messages"></div>
+    
+    <!-- Input area -->
+    <div class="input-area">
+      <input id="messageInput" type="text" placeholder="Type a message..." />
+      <button onclick="sendMessage()">Send</button>
+    </div>
+  </div>
+
+  <!-- Include Socket.io client library -->
+  <script src="/socket.io/socket.io.js"></script>
+  <!-- JavaScript to handle chat -->
+  <script>
+    // Get room name from URL parameter or default to 'global'
+    const urlParams = new URLSearchParams(window.location.search);
+    let currentRoom = urlParams.get('room') || 'global';
+    
+    // Get username from localStorage or prompt
+    let username = localStorage.getItem('hokeyUsername');
+    if (!username) {
+      username = prompt("Enter your username:");
+      if (!username) username = "Anon";
+      localStorage.setItem('hokeyUsername', username);
+    }
+    
+    const socket = io(); // Connect to the server
+    
+    // Set room title
+    updateRoomTitle();
+    
+    function updateRoomTitle() {
+      if (currentRoom === 'global') {
+        // Keep original HokeyChat for global
+        document.getElementById('roomTitle').textContent = 'Chat';
+        document.querySelector('.hokey').textContent = 'Hokey';
+      } else {
+        // Show full room name for other rooms
+        document.getElementById('roomTitle').textContent = '';
+        document.querySelector('.hokey').textContent = currentRoom;
+      }
+      document.getElementById('pageTitle').textContent = `${currentRoom} - HokeyChat`;
+    }
+
+    // Toggle room dropdown menu
+    function toggleRoomMenu() {
+      const menu = document.getElementById('roomDropdown');
+      const isOpen = menu.style.display === 'block';
+      menu.style.display = isOpen ? 'none' : 'block';
+      if (!isOpen) {
+        loadRooms();
+      }
+    }
+
+    // Close dropdown when clicking outside
+    document.addEventListener('click', function(event) {
+      const menu = document.getElementById('roomDropdown');
+      const button = document.getElementById('roomMenuToggle');
+      if (!menu.contains(event.target) && event.target !== button) {
+        menu.style.display = 'none';
+      }
+    });
+
+    // --- Theme toggle ---
+    let isDark = localStorage.getItem('hokeyTheme') === 'light' ? false : true;
+    
+    function setTheme(bg, text) {
+      document.documentElement.style.setProperty('--bg-color', bg);
+      document.documentElement.style.setProperty('--text-color', text);
+      document.documentElement.style.setProperty('--header-color', text);
+      if (bg === '#222') {
+        // Dark mode
+        document.documentElement.style.setProperty('--user-list-bg', '#333');
+        document.documentElement.style.setProperty('--messages-bg', '#222');
+        document.documentElement.style.setProperty('--button-bg', '#8e44ad');
+        document.documentElement.style.setProperty('--side-menu-bg', '#1a1a1a');
+        document.documentElement.style.setProperty('--room-item-hover', '#333');
+      } else {
+        // Light mode
+        document.documentElement.style.setProperty('--user-list-bg', '#f0f0f0');
+        document.documentElement.style.setProperty('--messages-bg', '#fafafa');
+        document.documentElement.style.setProperty('--button-bg', '#007bff');
+        document.documentElement.style.setProperty('--side-menu-bg', '#f9f9f9');
+        document.documentElement.style.setProperty('--room-item-hover', '#e9e9e9');
+      }
+    }
+    
+    function toggleTheme() {
+      isDark = !isDark;
+      if (isDark) {
+        setTheme('#222', '#fff');
+        document.getElementById('themeToggle').textContent = '☀️';
+        localStorage.setItem('hokeyTheme', 'dark');
+      } else {
+        setTheme('#fff', '#222');
+        document.getElementById('themeToggle').textContent = '🌙';
+        localStorage.setItem('hokeyTheme', 'light');
+      }
+    }
+    
+    // Set initial theme
+    if (isDark) {
+      setTheme('#222', '#fff');
+      document.getElementById('themeToggle').textContent = '☀️';
+    } else {
+      setTheme('#fff', '#222');
+      document.getElementById('themeToggle').textContent = '🌙';
+    }
+
+    // Load and display rooms
+    async function loadRooms() {
+      try {
+        const response = await fetch('/api/rooms');
+        const data = await response.json();
+        
+        if (data.success) {
+          displayRooms(data.rooms);
+        }
+      } catch (error) {
+        console.error('Error loading rooms:', error);
+      }
+    }
+
+    function displayRooms(rooms) {
+      const roomList = document.getElementById('roomList');
+      roomList.innerHTML = '';
+      
+      if (rooms.length === 0) {
+        roomList.innerHTML = '<p class="no-rooms">No rooms available</p>';
+        return;
+      }
+      
+      rooms.forEach(room => {
+        const roomItem = document.createElement('div');
+        roomItem.className = 'room-item';
+        if (room.name === currentRoom) {
+          roomItem.classList.add('active');
+        }
+        
+        const hasPassword = room.hasPassword ? '🔒' : '';
+        const saveMode = room.persistMessages ? '💾' : '🧠';
+        
+        roomItem.innerHTML = `
+          <div class="room-item-header">
+            <strong>${hasPassword} ${escapeHtml(room.name)}</strong>
+            <span class="room-item-count">${saveMode} ${room.activeUsers.length}/${room.maxUsers}</span>
+          </div>
+          <p class="room-item-desc">${escapeHtml(room.description || 'No description')}</p>
+        `;
+        
+        roomItem.onclick = () => switchRoom(room.name, room.hasPassword);
+        roomList.appendChild(roomItem);
+      });
+    }
+
+    // Create a new room
+    async function createRoom(event) {
+      event.preventDefault();
+      
+      const roomName = document.getElementById('roomName').value.trim();
+      const roomDescription = document.getElementById('roomDescription').value.trim();
+      const roomPassword = document.getElementById('roomPassword').value;
+      const saveToDatabase = document.getElementById('saveToDatabase').checked;
+      
+      if (!roomName) {
+        alert('Room name is required!');
+        return;
+      }
+      
+      try {
+        const response = await fetch('/api/rooms', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            name: roomName,
+            description: roomDescription,
+            password: roomPassword || undefined,
+            persistMessages: saveToDatabase,
+            createdBy: username
+          })
+        });
+        
+        const data = await response.json();
+        
+        if (data.success) {
+          document.getElementById('roomName').value = '';
+          document.getElementById('roomDescription').value = '';
+          document.getElementById('roomPassword').value = '';
+          document.getElementById('saveToDatabase').checked = true;
+          loadRooms();
+          switchRoom(roomName, !!roomPassword, roomPassword);
+        } else {
+          alert(`Error: ${data.error}`);
+        }
+      } catch (error) {
+        console.error('Error creating room:', error);
+        alert('Failed to create room.');
+      }
+    }
+
+    // Switch to a different room
+    function switchRoom(roomName, hasPassword, knownPassword) {
+      if (roomName === currentRoom) {
+        toggleRoomMenu();
+        return;
+      }
+      
+      // Check if room requires password
+      if (hasPassword && !knownPassword) {
+        const password = prompt(`Enter password for room "${roomName}":`);
+        if (!password) return;
+        knownPassword = password;
+      }
+      
+      currentRoom = roomName;
+      updateRoomTitle();
+      
+      // Update URL without reload
+      const newUrl = roomName === 'global' ? '/' : `/?room=${encodeURIComponent(roomName)}`;
+      window.history.pushState({}, '', newUrl);
+      
+      // Rejoin the new room with password if needed
+      socket.emit('join room', { 
+        room: currentRoom, 
+        username,
+        password: knownPassword 
+      });
+      
+      // Clear messages
+      document.getElementById('messages').innerHTML = '';
+      
+      // Close menu
+      toggleRoomMenu();
+    }
+
+    function escapeHtml(text) {
+      const div = document.createElement('div');
+      div.textContent = text;
+      return div.innerHTML;
+    }
+
+    // Function to send a message to the server
+    function sendMessage() {
+      const userInput = document.getElementById('messageInput');
+      let userMsg = userInput.value;
+      
+      userMsg = userMsg.trim();
+
+      if (!userMsg) {
+        alert("Message cannot be empty!");
+        return;
+      }
+      if (userMsg.length > 200) {
+        alert("Message too long! (max 200 characters)");
+        return;
+      }
+     
+      // Sanitize: escape < and > to prevent HTML injection
+      userMsg = userMsg.replace(/</g, "&lt;").replace(/>/g, "&gt;");
+
+      // Add timestamp (ISO string)
+      const timestamp = new Date().toISOString();
+
+      socket.emit('chat message', {
+        username, 
+        userMsg, 
+        timestamp,
+        room: currentRoom
+      });
+      userInput.value = '';
+    }
+
+    // --- Online users dropdown ---
+    function toggleUserDropdown() {
+      const dropdown = document.getElementById('userDropdown');
+      dropdown.style.display = dropdown.style.display === 'none' ? 'block' : 'none';
+    }
+
+    // Listen for user list updates from the server
+    socket.on('user list', function(data) {
+      // Check if this update is for the current room
+      if (data.room === currentRoom) {
+        document.getElementById('onlineCount').textContent = data.users.length;
+        const dropdown = document.getElementById('userDropdown');
+        dropdown.innerHTML = '';
+        data.users.forEach(function(user) {
+          const userElem = document.createElement('div');
+          userElem.textContent = user;
+          userElem.style.padding = '4px 8px';
+          dropdown.appendChild(userElem);
+        });
+      }
+    });
+
+    // Listen for room errors (like wrong password)
+    socket.on('room error', function(data) {
+      alert(data.message);
+      // Go back to global
+      switchRoom('global', false);
+    });
+
+    // Listen for message history from the server
+    socket.on('message history', function(history) {
+      const messagesDiv = document.getElementById('messages');
+      messagesDiv.innerHTML = '';
+      history.forEach(function(data) {
+        const msgElem = document.createElement('div');
+        const time = data.timestamp ? new Date(data.timestamp).toLocaleTimeString() : '';
+        msgElem.textContent = `[${time}] ${data.username}: ${data.userMsg}`;
+        messagesDiv.appendChild(msgElem);
+      });
+      // Scroll to bottom
+      messagesDiv.scrollTop = messagesDiv.scrollHeight;
+    });
+
+    // Allow sending message with Enter key
+    document.getElementById('messageInput').addEventListener('keydown', function(event) {
+      if (event.key === 'Enter') {
+        sendMessage();
+      }
+    });
+
+    // Listen for messages from the server
+    socket.on('chat message', function(msg) {
+      // Only display messages from the current room
+      if (msg.room === currentRoom) {
+        const msgDiv = document.getElementById('messages');
+        const msgElem = document.createElement('div');
+        const time = msg.timestamp ? new Date(msg.timestamp).toLocaleTimeString() : '';
+        msgElem.textContent = `[${time}] ${msg.username}: ${msg.userMsg}`;
+        msgDiv.appendChild(msgElem);
+        // Auto-scroll to bottom
+        msgDiv.scrollTop = msgDiv.scrollHeight;
+      }
+    });
+
+    // On connect, join the room
+    socket.on('connect', function() {
+      socket.emit('join room', { room: currentRoom, username });
+    });
+
+    // Handle disconnection
+    socket.on('disconnect', function() {
+      console.log('Disconnected from server');
+    });
+  </script>
+</body>
+</html>
+
+   

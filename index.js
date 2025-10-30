@@ -9,6 +9,10 @@ const { exec } = require('child_process');
 // Import database services
 const dbConnection = require('./database/connection');
 const chatService = require('./database/services/chatService');
+const roomService = require('./database/services/roomService');
+
+// Import controllers
+const roomController = require('./controllers/roomController');
 
 const app = express(); // Express is a web framework that simplifies server creation
 const server = http.createServer(app); // Create HTTP server
@@ -16,17 +20,32 @@ const io = new Server(server); // Attach Socket.io to the server
 
 const PORT = process.env.PORT || 8080; // Use Render's assigned port or default to 8080
 
+// Middleware to parse JSON bodies
+app.use(express.json());
+
 // Serve static files from the assets directory (for CSS, images, etc.)
 app.use('/assets', express.static(path.join(__dirname, 'assets')));
 
-// Serve index.html at root
+// Serve main chat page (global chat with side menu) at root
 app.get('/', (req, res) => {
-  res.sendFile(path.join(__dirname, 'index.html'));
+  res.sendFile(path.join(__dirname, 'views', 'chat.html'));
 });
+
+// Keep lobby as separate page if needed
+app.get('/lobby', (req, res) => {
+  res.sendFile(path.join(__dirname, 'views', 'lobby.html'));
+});
+
+// API Routes for rooms
+app.get('/api/rooms', (req, res) => roomController.getRooms(req, res));
+app.get('/api/rooms/:roomName', (req, res) => roomController.getRoom(req, res));
+app.post('/api/rooms', (req, res) => roomController.createRoom(req, res));
+app.put('/api/rooms/:roomName', (req, res) => roomController.updateRoom(req, res));
+app.delete('/api/rooms/:roomName', (req, res) => roomController.deleteRoom(req, res));
 
 // --- Message history feature ---
 const msgHistoryKept = true; // Set to false to disable message history
-let msgHistory = []; // Array to store message history (in-memory backup)
+let msgHistoryByRoom = {}; // Object to store message history per room (in-memory backup)
 
 // --- Database toggle ---
 // Check for 'db' argument: node index.js db
@@ -36,7 +55,7 @@ const USE_DATABASE = hasDbArg ? true : (process.env.USE_DATABASE === 'true');
 let isDatabaseConnected = false;
 
 // --- User tracking for online users ---
-let onlineUsers = {};
+let onlineUsersByRoom = {}; // Track users per room
 
 // Initialize database connection
 async function initializeDatabase() {
@@ -50,15 +69,22 @@ async function initializeDatabase() {
     isDatabaseConnected = true;
     console.log('📊 Database service initialized');
     
-    // Load recent messages from database if history is enabled
+    // Initialize default rooms
+    await roomService.initializeDefaultRooms();
+    
+    // Load recent messages from database for all rooms if history is enabled
     if (msgHistoryKept) {
-      const recentMessages = await chatService.getLimitedMessages('global', 50);
-      msgHistory = recentMessages.map(msg => ({
-        username: msg.username,
-        userMsg: msg.message,
-        timestamp: msg.timestamp
-      }));
-      console.log(`📜 Loaded ${msgHistory.length} recent messages from database`);
+      const rooms = await roomService.getAllPublicRooms();
+      for (const room of rooms) {
+        const recentMessages = await chatService.getLimitedMessages(room.name, 50);
+        msgHistoryByRoom[room.name] = recentMessages.map(msg => ({
+          username: msg.username,
+          userMsg: msg.message,
+          timestamp: msg.timestamp,
+          room: msg.room
+        }));
+        console.log(`📜 Loaded ${msgHistoryByRoom[room.name].length} messages for room: ${room.name}`);
+      }
     }
   } catch (error) {
     console.error('❌ Database initialization failed:', error.message);
@@ -69,20 +95,67 @@ async function initializeDatabase() {
 
 io.on('connection', (socket) => {
   console.log('A user connected');
+  let currentRoom = null;
+  let currentUsername = null;
 
-  // Listen for user registration
-  socket.on('register user', (username) => {//This listens for a message called 'register user' from a client
-// Each connected client gets a unique ID (socket.id).
-// This line saves the username for that client’s ID in the onlineUsers object.
-// Example: If two users join, onlineUsers might look like { 'abc123': 'Alice', 'def456': 'Bob' }.
-    onlineUsers[socket.id] = username;
-    io.emit('user list', Object.values(onlineUsers));// Broadcast updated user list
+  // Listen for user joining a room
+  socket.on('join room', async (data) => {
+    const { room, username, password } = data;
+    
+    // Verify password if room requires it
+    if (USE_DATABASE && isDatabaseConnected) {
+      try {
+        const roomData = await roomService.getRoomByName(room);
+        if (roomData && roomData.password) {
+          if (!password) {
+            socket.emit('room error', { message: 'Password required' });
+            return;
+          }
+          const isValid = await roomService.verifyRoomPassword(room, password);
+          if (!isValid) {
+            socket.emit('room error', { message: 'Incorrect password' });
+            return;
+          }
+        }
+      } catch (error) {
+        console.error('Error verifying room access:', error.message);
+      }
+    }
+    
+    currentRoom = room;
+    currentUsername = username;
+    
+    // Join the socket.io room
+    socket.join(room);
+    console.log(`${username} joined room: ${room}`);
+    
+    // Add user to room in database if enabled
+    if (USE_DATABASE && isDatabaseConnected) {
+      try {
+        await roomService.addUserToRoom(room, socket.id, username);
+      } catch (error) {
+        console.error('Failed to add user to room in database:', error.message);
+      }
+    }
+    
+    // Track user in memory
+    if (!onlineUsersByRoom[room]) {
+      onlineUsersByRoom[room] = {};
+    }
+    onlineUsersByRoom[room][socket.id] = username;
+    
+    // Broadcast updated user list to room
+    io.to(room).emit('user list', {
+      room: room,
+      users: Object.values(onlineUsersByRoom[room])
+    });
+    
+    // Send message history to the user if enabled
+    if (msgHistoryKept) {
+      const history = msgHistoryByRoom[room] || [];
+      socket.emit('message history', history);
+    }
   });
-
-  // Send message history to the new client if enabled
-  if (msgHistoryKept) {
-    socket.emit('message history', msgHistory);
-  }
 
   // Listen for chat messages from this client
   socket.on('chat message', async (data) => {
@@ -103,41 +176,76 @@ io.on('connection', (socket) => {
       data.timestamp = new Date().toISOString();
     }
     
+    // Ensure room is set
+    if (!data.room) {
+      data.room = currentRoom || 'global';
+    }
+    
     // Store message in database if enabled
     if (msgHistoryKept) {
-      // Try to save to database if connected
+      // Check if room wants messages persisted to database
+      let shouldPersist = true;
       if (USE_DATABASE && isDatabaseConnected) {
         try {
-          await chatService.saveMessage({
-            username: data.username,
-            message: data.userMsg,
-            room: 'global'
-          });
-          console.log(`💾 Message saved to database: ${data.username}`);
+          const roomData = await roomService.getRoomByName(data.room);
+          shouldPersist = roomData ? roomData.persistMessages !== false : true;
+          
+          // Try to save to database if room allows it
+          if (shouldPersist) {
+            await chatService.saveMessage({
+              username: data.username,
+              message: data.userMsg,
+              room: data.room
+            });
+            // Increment room message count
+            await roomService.incrementMessageCount(data.room);
+            console.log(`💾 Message saved to database: ${data.username} in ${data.room}`);
+          } else {
+            console.log(`🧠 Message kept in memory only: ${data.username} in ${data.room}`);
+          }
         } catch (error) {
           console.error('❌ Failed to save message to database:', error.message);
-          // Fall back to memory-only if database fails
-          isDatabaseConnected = false;
         }
       }
       
       // Always store in memory as backup
-      msgHistory.push(data);
-      // Limit history size eg to last 100 messages
-      if (msgHistory.length > 100) {
-        msgHistory.shift();
+      if (!msgHistoryByRoom[data.room]) {
+        msgHistoryByRoom[data.room] = [];
+      }
+      msgHistoryByRoom[data.room].push(data);
+      // Limit history size to last 100 messages per room
+      if (msgHistoryByRoom[data.room].length > 100) {
+        msgHistoryByRoom[data.room].shift();
       }
     }
     
-    // Broadcast the message to all clients
-    io.emit('chat message', data);
+    // Broadcast the message to all clients in the room
+    io.to(data.room).emit('chat message', data);
   });
 
   // Handle client disconnection
-  socket.on('disconnect', () => {
+  socket.on('disconnect', async () => {
     console.log('A user disconnected');
-    delete onlineUsers[socket.id];
-    io.emit('user list', Object.values(onlineUsers));
+    
+    if (currentRoom && onlineUsersByRoom[currentRoom]) {
+      // Remove user from database if enabled
+      if (USE_DATABASE && isDatabaseConnected) {
+        try {
+          await roomService.removeUserFromRoom(currentRoom, socket.id);
+        } catch (error) {
+          console.error('Failed to remove user from room in database:', error.message);
+        }
+      }
+      
+      // Remove from memory
+      delete onlineUsersByRoom[currentRoom][socket.id];
+      
+      // Broadcast updated user list to room
+      io.to(currentRoom).emit('user list', {
+        room: currentRoom,
+        users: Object.values(onlineUsersByRoom[currentRoom])
+      });
+    }
   });
 });
 

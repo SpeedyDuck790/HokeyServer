@@ -1,5 +1,6 @@
 const Message = require('../models/Message');
 
+// Chat service to handle message operations
 class ChatService {
     constructor() {
         this.maxMessagesPerRoom = 1000; // messages Limit per room

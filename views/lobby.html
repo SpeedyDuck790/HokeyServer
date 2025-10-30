@@ -1,0 +1,61 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <title>HokeyChat - Rooms</title>
+  <link rel="stylesheet" href="assets/style.css">
+</head>
+<body>
+  <div class="lobby-container">
+    <!-- Header -->
+    <div class="header">
+      <h1><span class="hokey">Hokey</span><span class="chat">Chat</span></h1>
+      <p class="subtitle">Wild west chatrooms as if it's the 90s</p>
+    </div>
+    
+    <div class="controls">
+      <!-- Settings menu -->
+      <div>
+        <button id="themeToggle" onclick="toggleTheme()" title="Toggle light/dark mode">🌙</button>
+      </div>
+      
+      <!-- Username display -->
+      <div>
+        <span id="usernameDisplay"></span>
+      </div>
+    </div>
+    
+    <!-- Room creation form -->
+    <div class="room-creation">
+      <h2>Create New Room</h2>
+      <form id="createRoomForm">
+        <input 
+          type="text" 
+          id="roomName" 
+          placeholder="Room name (max 50 chars)" 
+          maxlength="50" 
+          required 
+        />
+        <input 
+          type="text" 
+          id="roomDescription" 
+          placeholder="Description (optional, max 200 chars)" 
+          maxlength="200" 
+        />
+        <button type="submit">Create Room</button>
+      </form>
+    </div>
+    
+    <!-- Room list -->
+    <div class="room-list-section">
+      <h2>Available Rooms</h2>
+      <div id="roomList" class="room-list">
+        <!-- Rooms will be loaded here dynamically -->
+      </div>
+    </div>
+  </div>
+
+  <!-- Include Socket.io client library -->
+  <script src="/socket.io/socket.io.js"></script>
+  <script src="assets/room.js"></script>
+</body>
+</html>
