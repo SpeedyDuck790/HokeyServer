@@ -28,18 +28,31 @@ app.get('/', (req, res) => {
 const msgHistoryKept = true; // Set to false to disable message history
 let msgHistory = []; // Array to store message history (in-memory backup)
 
+// --- Database toggle ---
+// Check for 'db' argument: node index.js db
+// Or use USE_DATABASE environment variable (default: false)
+const hasDbArg = process.argv.includes('db');
+const USE_DATABASE = hasDbArg ? true : (process.env.USE_DATABASE === 'true');
+let isDatabaseConnected = false;
+
 // --- User tracking for online users ---
 let onlineUsers = {};
 
 // Initialize database connection
 async function initializeDatabase() {
+  if (!USE_DATABASE) {
+    console.log('📝 Database disabled - using memory-only mode');
+    return;
+  }
+
   try {
     await dbConnection.connect();
+    isDatabaseConnected = true;
     console.log('📊 Database service initialized');
     
     // Load recent messages from database if history is enabled
     if (msgHistoryKept) {
-      const recentMessages = await chatService.getRecentMessages('general', 50);
+      const recentMessages = await chatService.getLimitedMessages('global', 50);
       msgHistory = recentMessages.map(msg => ({
         username: msg.username,
         userMsg: msg.message,
@@ -50,6 +63,7 @@ async function initializeDatabase() {
   } catch (error) {
     console.error('❌ Database initialization failed:', error.message);
     console.log('⚠️ Running in memory-only mode');
+    isDatabaseConnected = false;
   }
 }
 
@@ -91,18 +105,23 @@ io.on('connection', (socket) => {
     
     // Store message in database if enabled
     if (msgHistoryKept) {
-      try {
-        await chatService.saveMessage({
-          username: data.username,
-          message: data.userMsg,
-          room: 'general'
-        });
-        console.log(`💾 Message saved to database: ${data.username}`);
-      } catch (error) {
-        console.error('❌ Failed to save message to database:', error.message);
+      // Try to save to database if connected
+      if (USE_DATABASE && isDatabaseConnected) {
+        try {
+          await chatService.saveMessage({
+            username: data.username,
+            message: data.userMsg,
+            room: 'global'
+          });
+          console.log(`💾 Message saved to database: ${data.username}`);
+        } catch (error) {
+          console.error('❌ Failed to save message to database:', error.message);
+          // Fall back to memory-only if database fails
+          isDatabaseConnected = false;
+        }
       }
       
-      // Also store in memory as backup
+      // Always store in memory as backup
       msgHistory.push(data);
       // Limit history size eg to last 100 messages
       if (msgHistory.length > 100) {
