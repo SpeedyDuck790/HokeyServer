@@ -37,7 +37,43 @@ app.get('/lobby', (req, res) => {
 });
 
 // API Routes for rooms
-app.get('/api/rooms', (req, res) => roomController.getRooms(req, res));
+// Live endpoint must come BEFORE the generic /api/rooms to match first
+app.get('/api/rooms/live', async (req, res) => {
+  try {
+    const roomService = require('./database/services/roomService');
+    const rooms = await roomService.getAllPublicRooms();
+    
+    // Add real-time online counts from memory
+    const roomsWithOnline = rooms.map(room => {
+      const roomData = room.toObject ? room.toObject() : room;
+      const onlineCount = onlineUsersByRoom[room.name] ? Object.keys(onlineUsersByRoom[room.name]).length : 0;
+      return {
+        ...roomData,
+        onlineCount: onlineCount
+      };
+    });
+    
+    res.json({
+      success: true,
+      rooms: roomsWithOnline
+    });
+  } catch (error) {
+    console.error('Error fetching live rooms:', error.message);
+    res.status(500).json({
+      success: false,
+      error: 'Failed to fetch rooms'
+    });
+  }
+});
+
+app.get('/api/rooms', async (req, res) => {
+  try {
+    await roomController.getRooms(req, res);
+  } catch (error) {
+    // Error already handled in controller
+  }
+});
+
 app.get('/api/rooms/:roomName', (req, res) => roomController.getRoom(req, res));
 app.post('/api/rooms', (req, res) => roomController.createRoom(req, res));
 app.put('/api/rooms/:roomName', (req, res) => roomController.updateRoom(req, res));
@@ -120,6 +156,34 @@ io.on('connection', (socket) => {
       } catch (error) {
         console.error('Error verifying room access:', error.message);
       }
+    }
+
+    // If user is switching rooms, remove from old room first
+    if (currentRoom && currentRoom !== room) {
+      // Leave the old socket.io room
+      socket.leave(currentRoom);
+      
+      // Remove from old room in database
+      if (USE_DATABASE && isDatabaseConnected) {
+        try {
+          await roomService.removeUserFromRoom(currentRoom, socket.id);
+        } catch (error) {
+          console.error('Failed to remove user from old room:', error.message);
+        }
+      }
+      
+      // Remove from memory tracking
+      if (onlineUsersByRoom[currentRoom]) {
+        delete onlineUsersByRoom[currentRoom][socket.id];
+        
+        // Broadcast updated user list to old room
+        io.to(currentRoom).emit('user list', {
+          room: currentRoom,
+          users: Object.values(onlineUsersByRoom[currentRoom])
+        });
+      }
+      
+      console.log(`Leave|${currentUsername}|${currentRoom}|`);
     }
 
     currentRoom = room;

@@ -61,7 +61,7 @@ if (isDark) {
 // Fetch and display rooms
 async function loadRooms() {
   try {
-    const response = await fetch('/api/rooms');
+    const response = await fetch('/api/rooms/live');
     const data = await response.json();
     
     if (data.success) {
@@ -88,18 +88,25 @@ function displayRooms(rooms) {
     const roomCard = document.createElement('div');
     roomCard.className = 'room-card';
     
+    // Highlight global room with gold
+    if (room.name === 'global') {
+      roomCard.classList.add('global-room');
+    }
+    
     // Status indicators
     const hasPassword = room.hasPassword ? '🔒' : '';
     const saveMode = room.persistMessages ? '💾' : '🧠';
+    const onlineCount = room.onlineCount || 0; // Use real-time count
+    const totalMessages = room.messageCount || 0;
     
     roomCard.innerHTML = `
       <div class="room-header">
         <h3>${hasPassword} ${escapeHtml(room.name)}</h3>
-        <span class="room-users">${room.activeUsers.length}/${room.maxUsers} users</span>
+        <span class="room-users">${saveMode}</span>
       </div>
       <p class="room-description">${escapeHtml(room.description || 'No description')}</p>
       <div class="room-footer">
-        <span class="room-messages">${saveMode} ${room.messageCount} messages</span>
+        <span class="room-messages">👥 ${onlineCount} online | 💬 ${totalMessages} msgs</span>
         <button onclick="joinRoom('${escapeHtml(room.name)}')">Join</button>
       </div>
     `;
@@ -125,6 +132,8 @@ document.getElementById('createRoomForm').addEventListener('submit', async (even
   
   const roomName = document.getElementById('roomName').value.trim();
   const roomDescription = document.getElementById('roomDescription').value.trim();
+  const roomPassword = document.getElementById('roomPassword').value;
+  const saveToDatabase = document.getElementById('saveToDatabase').checked;
   
   if (!roomName) {
     alert('Room name is required!');
@@ -140,6 +149,8 @@ document.getElementById('createRoomForm').addEventListener('submit', async (even
       body: JSON.stringify({
         name: roomName,
         description: roomDescription,
+        password: roomPassword || undefined,
+        persistMessages: saveToDatabase,
         createdBy: username
       })
     });
@@ -151,6 +162,8 @@ document.getElementById('createRoomForm').addEventListener('submit', async (even
       // Clear form
       document.getElementById('roomName').value = '';
       document.getElementById('roomDescription').value = '';
+      document.getElementById('roomPassword').value = '';
+      document.getElementById('saveToDatabase').checked = true;
       // Reload rooms
       loadRooms();
     } else {

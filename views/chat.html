@@ -197,7 +197,7 @@
     // Load and display rooms
     async function loadRooms() {
       try {
-        const response = await fetch('/api/rooms');
+        const response = await fetch('/api/rooms/live');
         const data = await response.json();
         
         if (data.success) {
@@ -220,19 +220,29 @@
       rooms.forEach(room => {
         const roomItem = document.createElement('div');
         roomItem.className = 'room-item';
+        
+        // Highlight current room with border
         if (room.name === currentRoom) {
           roomItem.classList.add('active');
         }
         
+        // Highlight global room with gold
+        if (room.name === 'global') {
+          roomItem.classList.add('global-room');
+        }
+        
         const hasPassword = room.hasPassword ? '🔒' : '';
         const saveMode = room.persistMessages ? '💾' : '🧠';
+        const onlineCount = room.onlineCount || 0; // Use real-time count
+        const totalMessages = room.messageCount || 0;
         
         roomItem.innerHTML = `
           <div class="room-item-header">
             <strong>${hasPassword} ${escapeHtml(room.name)}</strong>
-            <span class="room-item-count">${saveMode} ${room.activeUsers.length}/${room.maxUsers}</span>
+            <span class="room-item-count">${saveMode}</span>
           </div>
           <p class="room-item-desc">${escapeHtml(room.description || 'No description')}</p>
+          <p class="room-item-stats">👥 ${onlineCount} online | 💬 ${totalMessages} msgs</p>
         `;
         
         roomItem.onclick = () => switchRoom(room.name, room.hasPassword);
