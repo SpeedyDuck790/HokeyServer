@@ -230,6 +230,53 @@ function escapeHtml(text) {
   return div.innerHTML;
 }
 
+// --- Reply Feature ---
+
+let replyingTo = null; // Stores the message being replied to
+
+/**
+ * Set up a reply to a specific message
+ */
+function replyToMessage(messageData) {
+  replyingTo = messageData;
+  
+  // Show reply preview
+  const replyPreview = document.getElementById('replyPreview');
+  if (!replyPreview) {
+    // Create reply preview element if it doesn't exist
+    const preview = document.createElement('div');
+    preview.id = 'replyPreview';
+    preview.className = 'reply-preview';
+    
+    const inputArea = document.querySelector('.input-area');
+    inputArea.parentNode.insertBefore(preview, inputArea);
+  }
+  
+  const replyPreviewElem = document.getElementById('replyPreview');
+  replyPreviewElem.innerHTML = `
+    <div class="reply-preview-content">
+      <span class="reply-preview-label">Replying to ${escapeHtml(messageData.username)}:</span>
+      <span class="reply-preview-message">${escapeHtml(messageData.userMsg)}</span>
+    </div>
+    <button class="reply-preview-cancel" onclick="cancelReply()">✕</button>
+  `;
+  replyPreviewElem.style.display = 'flex';
+  
+  // Focus on input
+  document.getElementById('messageInput').focus();
+}
+
+/**
+ * Cancel the current reply
+ */
+function cancelReply() {
+  replyingTo = null;
+  const replyPreview = document.getElementById('replyPreview');
+  if (replyPreview) {
+    replyPreview.style.display = 'none';
+  }
+}
+
 // --- Messaging ---
 
 /**
@@ -256,13 +303,28 @@ function sendMessage() {
   // Add timestamp (ISO string)
   const timestamp = new Date().toISOString();
 
-  socket.emit('chat message', {
+  const messageData = {
     username: getCurrentUsername(),
     userMsg,
     timestamp,
     room: currentRoom
-  });
+  };
+
+  // Add reply context if replying to a message
+  if (replyingTo) {
+    messageData.replyTo = {
+      messageId: replyingTo.messageId || replyingTo.timestamp, // Use timestamp as fallback ID
+      username: replyingTo.username,
+      message: replyingTo.userMsg,
+      timestamp: replyingTo.timestamp
+    };
+  }
+
+  socket.emit('chat message', messageData);
   userInput.value = '';
+  
+  // Clear reply state after sending
+  cancelReply();
 }
 
 /**
@@ -303,10 +365,7 @@ socket.on('message history', function(history) {
   const messagesDiv = document.getElementById('messages');
   messagesDiv.innerHTML = '';
   history.forEach(function(data) {
-    const msgElem = document.createElement('div');
-    const time = data.timestamp ? new Date(data.timestamp).toLocaleTimeString() : '';
-    msgElem.textContent = `[${time}] ${data.username}: ${data.userMsg}`;
-    messagesDiv.appendChild(msgElem);
+    displayMessage(data);
   });
   // Scroll to bottom
   messagesDiv.scrollTop = messagesDiv.scrollHeight;
@@ -316,15 +375,61 @@ socket.on('message history', function(history) {
 socket.on('chat message', function(msg) {
   // Only display messages from the current room
   if (msg.room === currentRoom) {
-    const msgDiv = document.getElementById('messages');
-    const msgElem = document.createElement('div');
-    const time = msg.timestamp ? new Date(msg.timestamp).toLocaleTimeString() : '';
-    msgElem.textContent = `[${time}] ${msg.username}: ${msg.userMsg}`;
-    msgDiv.appendChild(msgElem);
+    displayMessage(msg);
     // Auto-scroll to bottom
+    const msgDiv = document.getElementById('messages');
     msgDiv.scrollTop = msgDiv.scrollHeight;
   }
 });
+
+/**
+ * Display a message in the chat
+ */
+function displayMessage(data) {
+  const messagesDiv = document.getElementById('messages');
+  const msgElem = document.createElement('div');
+  msgElem.className = 'message';
+  if (data.messageType === 'reply') {
+    msgElem.classList.add('message-reply');
+  }
+  
+  const time = data.timestamp ? new Date(data.timestamp).toLocaleTimeString() : '';
+  
+  let messageHTML = '';
+  
+  // Show reply context if this is a reply
+  if (data.replyTo) {
+    const replyTime = data.replyTo.timestamp ? new Date(data.replyTo.timestamp).toLocaleTimeString() : '';
+    messageHTML += `
+      <div class="reply-context">
+        <div class="reply-bar"></div>
+        <div class="reply-info">
+          <span class="reply-username">${escapeHtml(data.replyTo.username)}</span>
+          <span class="reply-time">[${replyTime}]</span>
+          <span class="reply-message">${escapeHtml(data.replyTo.message)}</span>
+        </div>
+      </div>
+    `;
+  }
+  
+  // Message content
+  messageHTML += `
+    <div class="message-content">
+      <span class="message-time">[${time}]</span>
+      <span class="message-username">${escapeHtml(data.username)}:</span>
+      <span class="message-text">${escapeHtml(data.userMsg)}</span>
+      <button class="message-reply-btn" onclick='replyToMessage(${JSON.stringify({
+        messageId: data._id || data.timestamp,
+        username: data.username,
+        userMsg: data.userMsg,
+        timestamp: data.timestamp
+      }).replace(/'/g, "&apos;")})' title="Reply to this message">↩</button>
+    </div>
+  `;
+  
+  msgElem.innerHTML = messageHTML;
+  messagesDiv.appendChild(msgElem);
+}
 
 // On connect, join the room (prompt for password if needed)
 socket.on('connect', async function() {

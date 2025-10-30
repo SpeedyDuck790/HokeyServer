@@ -32,8 +32,18 @@ const messageSchema = new mongoose.Schema({
     // Type of message if i want to expand later
     messageType: {
         type: String,
-        enum: ['message'],
+        enum: ['message', 'reply'],
         default: 'message'
+    },
+    // Reference to the message being replied to (for reply type messages)
+    replyTo: {
+        messageId: {
+            type: mongoose.Schema.Types.ObjectId,
+            ref: 'Message'
+        },
+        username: String,
+        message: String,
+        timestamp: Date
     },
     // Indicates if the message has been edited
     isEdited: {

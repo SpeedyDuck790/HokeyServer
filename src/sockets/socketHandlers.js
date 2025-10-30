@@ -130,6 +130,9 @@ function attachSocketHandlers(io, options = {}) {
         data.room = currentRoom || 'global';
       }
 
+      // Determine message type and handle reply data
+      const messageType = data.replyTo ? 'reply' : 'message';
+
       // Store message in database if enabled
       if (msgHistoryKept) {
         // Check if room wants messages persisted to database
@@ -142,35 +145,49 @@ function attachSocketHandlers(io, options = {}) {
 
             // Try to save to database if room allows it
             if (shouldPersist) {
-              await chatService.saveMessage({
+              const messageData = {
                 username: data.username,
                 message: data.userMsg,
-                room: data.room
-              });
+                room: data.room,
+                messageType
+              };
+
+              // Add reply context if this is a reply
+              if (data.replyTo) {
+                messageData.replyTo = {
+                  messageId: data.replyTo.messageId,
+                  username: data.replyTo.username,
+                  message: data.replyTo.message,
+                  timestamp: data.replyTo.timestamp
+                };
+              }
+
+              await chatService.saveMessage(messageData);
               // Increment room message count
               await roomService.incrementMessageCount(data.room);
-              console.log(`Msg saved|${data.username}|${data.room}|Db|`);
+              console.log(`Msg saved|${data.username}|${data.room}|${messageType}|Db|`);
             } else {
-              console.log(`Msg saved|${data.username}|${data.room}|NoDb|`);
+              console.log(`Msg saved|${data.username}|${data.room}|${messageType}|NoDb|`);
             }
           } catch (error) {
             console.error('❌ Failed to save message to database:', error.message);
           }
         }
 
-        // Always store in memory as backup
+        // Always store in memory as backup (include message type)
+        const memoryCopy = { ...data, messageType };
         if (!msgHistoryByRoom[data.room]) {
           msgHistoryByRoom[data.room] = [];
         }
-        msgHistoryByRoom[data.room].push(data);
+        msgHistoryByRoom[data.room].push(memoryCopy);
         // Limit history size to last 100 messages per room
         if (msgHistoryByRoom[data.room].length > 100) {
           msgHistoryByRoom[data.room].shift();
         }
       }
 
-      // Broadcast the message to all clients in the room
-      io.to(data.room).emit('chat message', data);
+      // Broadcast the message to all clients in the room (include message type and reply context)
+      io.to(data.room).emit('chat message', { ...data, messageType });
     });
 
     // Handle client disconnection

@@ -13,12 +13,13 @@ class ChatService {
      * @param {string} messageData.message - The message content
      * @param {string} messageData.room - The room name (default: 'global')
      * @param {string} messageData.messageType - Type of message (default: 'message')
+     * @param {Object} messageData.replyTo - Reply context if this is a reply message
      * @returns {Promise<Object>} The saved message
      */
     async saveMessage(messageData) {
         try {
             // Destructure messageData as well as set defaults
-            const { username, message, room = 'global', messageType = 'message' } = messageData;
+            const { username, message, room = 'global', messageType = 'message', replyTo } = messageData;
 
             //----------------------------------------------------------------------
             // there will be a way of setting "message type" and "room" later here |
@@ -39,14 +40,27 @@ class ChatService {
                 throw new Error('Message too long (max 500 characters)');
             }
 
-            // Create and save the message using the message model 
-            const newMessage = new Message({
+            // Create message object
+            const messageObj = {
                 username: username.trim(),
                 message: message.trim(),
                 room: room.trim(),
                 messageType,
                 timestamp: new Date()
-            });
+            };
+
+            // Add reply context if this is a reply message
+            if (messageType === 'reply' && replyTo) {
+                messageObj.replyTo = {
+                    messageId: replyTo.messageId,
+                    username: replyTo.username,
+                    message: replyTo.message,
+                    timestamp: replyTo.timestamp
+                };
+            }
+
+            // Create and save the message using the message model 
+            const newMessage = new Message(messageObj);
 
             // Save the message to the database
             const savedMessage = await newMessage.save();
