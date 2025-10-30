@@ -1,5 +1,3 @@
-
-
 # HokeyChat
 ### by James Hill
 
@@ -50,4 +48,38 @@ HokeyServer/
 ├── .gitignore       # Files/folders to ignore in git 
 └── README.md        # This file
 ```
+
+---
+
+## Database (MongoDB Atlas)
+
+This app uses MongoDB Atlas for persistent chat history. You can use any MongoDB instance, but Atlas is recommended for easy cloud hosting.
+
+### Database Folder Structure
+
+```
+database/
+├── connection.js           # Handles MongoDB connection
+├── models/
+│   └── Message.js         # Mongoose schema/model for chat messages
+└── services/
+    └── chatService.js     # Service for saving/fetching/cleaning up messages
+```
+
+### Environment Variables (.env)
+
+Sensitive info like your database URI is stored in a `.env` file (never commit this to git!):
+```
+MONGODB_URI=mongodb+srv://<username>:<password>@<cluster-url>/<database>?retryWrites=true&w=majority&appName=Hokey-Chat
+PORT=3000
+```
+- Replace `<username>`, `<password>`, and `<cluster-url>` with your MongoDB Atlas details.
+- The default database name is `hokey-chat`.
+
+### How it Works
+- On server start, the app connects to MongoDB using the URI from `.env`.
+- Messages are saved to the database and loaded for new users.
+- Old messages are automatically cleaned up (max 1000 per room).
+- If the database is unavailable, the app falls back to in-memory history (not persistent).
+
 

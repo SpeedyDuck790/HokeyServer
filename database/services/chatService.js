@@ -2,7 +2,7 @@ const Message = require('../models/Message');
 
 class ChatService {
     constructor() {
-        this.maxMessagesPerRoom = 1000; // Limit messages per room for performance
+        this.maxMessagesPerRoom = 1000; // messages Limit per room
     }
 
     /**
@@ -10,28 +10,35 @@ class ChatService {
      * @param {Object} messageData - The message data
      * @param {string} messageData.username - The username
      * @param {string} messageData.message - The message content
-     * @param {string} messageData.room - The room name (default: 'general')
+     * @param {string} messageData.room - The room name (default: 'global')
      * @param {string} messageData.messageType - Type of message (default: 'message')
      * @returns {Promise<Object>} The saved message
      */
     async saveMessage(messageData) {
         try {
-            const { username, message, room = 'general', messageType = 'message' } = messageData;
+            // Destructure messageData as well as set defaults
+            const { username, message, room = 'global', messageType = 'message' } = messageData;
 
-            // Validate input
+            //----------------------------------------------------------------------
+            // there will be a way of setting "message type" and "room" later here |
+            // ---------------------------------------------------------------------
+
+            // Validate for no null/undefined values
             if (!username || !message) {
                 throw new Error('Username and message are required');
             }
 
+            // Validate username length
             if (username.length > 50) {
                 throw new Error('Username too long (max 50 characters)');
             }
 
+            // Validate message length
             if (message.length > 500) {
                 throw new Error('Message too long (max 500 characters)');
             }
 
-            // Create and save the message
+            // Create and save the message using the message model 
             const newMessage = new Message({
                 username: username.trim(),
                 message: message.trim(),
@@ -40,6 +47,7 @@ class ChatService {
                 timestamp: new Date()
             });
 
+            // Save the message to the database
             const savedMessage = await newMessage.save();
             console.log(`💾 Message saved: ${username} in ${room}`);
 
@@ -55,11 +63,11 @@ class ChatService {
 
     /**
      * Get recent messages from a room
-     * @param {string} room - The room name (default: 'general')
+     * @param {string} room - The room name (default: 'global')
      * @param {number} limit - Number of messages to retrieve (default: 50)
      * @returns {Promise<Array>} Array of messages
      */
-    async getRecentMessages(room = 'general', limit = 50) {
+    async getLimitedMessages(room = 'global', limit = 50) {
         try {
             const messages = await Message.getRecentMessages(room, limit);
             
@@ -76,7 +84,7 @@ class ChatService {
      * @param {string} room - The room name
      * @returns {Promise<Array>} Array of all messages
      */
-    async getAllMessages(room = 'general') {
+    async getAllMessages(room = 'global') {
         try {
             const messages = await Message.find({ room })
                 .sort({ timestamp: 1 }) // Chronological order
@@ -89,43 +97,12 @@ class ChatService {
         }
     }
 
-    /**
-     * Get message statistics for a room
-     * @param {string} room - The room name
-     * @returns {Promise<Object>} Statistics object
-     */
-    async getRoomStats(room = 'general') {
-        try {
-            const totalMessages = await Message.getMessageCount(room);
-            const uniqueUsers = await Message.distinct('username', { room });
-            
-            const oldestMessage = await Message.findOne({ room })
-                .sort({ timestamp: 1 })
-                .exec();
-            
-            const newestMessage = await Message.findOne({ room })
-                .sort({ timestamp: -1 })
-                .exec();
-
-            return {
-                totalMessages,
-                uniqueUsers: uniqueUsers.length,
-                userList: uniqueUsers,
-                oldestMessage: oldestMessage?.timestamp,
-                newestMessage: newestMessage?.timestamp,
-                room
-            };
-        } catch (error) {
-            console.error('❌ Error fetching room stats:', error.message);
-            throw error;
-        }
-    }
 
     /**
      * Delete old messages if room exceeds the limit
      * @param {string} room - The room name
      */
-    async cleanupOldMessages(room = 'general') {
+    async cleanupOldMessages(room = 'global') {
         try {
             const messageCount = await Message.getMessageCount(room);
             
@@ -151,25 +128,10 @@ class ChatService {
     }
 
     /**
-     * Save a system message (user join/leave, etc.)
-     * @param {string} message - The system message
-     * @param {string} room - The room name
-     * @param {string} messageType - Type of system message
-     */
-    async saveSystemMessage(message, room = 'general', messageType = 'system') {
-        return this.saveMessage({
-            username: 'System',
-            message,
-            room,
-            messageType
-        });
-    }
-
-    /**
      * Clear all messages from a room (admin function)
      * @param {string} room - The room name
      */
-    async clearRoom(room = 'general') {
+    async clearRoom(room = 'global') {
         try {
             const result = await Message.deleteMany({ room });
             console.log(`🗑️ Cleared ${result.deletedCount} messages from ${room}`);
@@ -181,7 +143,7 @@ class ChatService {
     }
 }
 
-// Create a singleton instance
+// singleton instance
 const chatService = new ChatService();
-
+//export the singleton instance
 module.exports = chatService;
