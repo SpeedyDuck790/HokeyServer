@@ -1,0 +1,97 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title id="pageTitle">HokeyChat</title>
+  <link rel="stylesheet" href="/css/style.css">
+</head>
+<body>
+  <div class="chat-container">
+    <!-- Main Page Title and Subtitle-->
+    <div class="header">
+      <h1><span class="hokey">Hokey</span><span class="chat" id="roomTitle">Chat</span></h1>
+      <p class="subtitle">Wild west chatrooms as if it's the 90s</p>
+    </div>
+    
+    <div class="controls">
+
+      <!-- Settings menu and username input -->
+      <div style="display: flex; align-items: center; gap: 10px;">
+        <button id="themeToggle" onclick="toggleTheme()" title="Toggle light/dark mode">🌙</button>
+        <button id="roomMenuToggle" onclick="toggleRoomMenu()" title="Show/Hide Rooms">🏠 Rooms ▼</button>
+        <div class="username-box" style="position: static; background: none; box-shadow: none; padding: 0; border-radius: 0;">
+          <label for="usernameInput" style="font-size: 0.95em;">Username:</label>
+          <input id="usernameInput" type="text" maxlength="50" placeholder="Anon" style="width: 100px;" />
+        </div>
+      </div>
+
+      <!-- Online users box -->
+      <div>
+        <button id="onlineUsersBtn" onclick="toggleUserDropdown()">
+          <span id="onlineCount">0</span> online
+        </button>
+        <div id="userDropdown" class="dropdown-menu"></div>
+      </div>
+    </div>
+    
+    <!-- Top dropdown menu for rooms -->
+    <div id="roomDropdown" class="room-dropdown">
+      <!-- Create room section -->
+      <div class="dropdown-section">
+        <h3>Create Room</h3>
+        <form id="createRoomForm" onsubmit="createRoom(event)">
+          <input 
+            type="text" 
+            id="roomName" 
+            placeholder="Room name" 
+            maxlength="50" 
+            required 
+          />
+          <input 
+            type="text" 
+            id="roomDescription" 
+            placeholder="Description (optional)" 
+            maxlength="200" 
+          />
+          <input 
+            type="password" 
+            id="roomPassword" 
+            placeholder="Password (optional)" 
+            maxlength="50" 
+          />
+          <label>
+            <input type="checkbox" id="saveToDatabase" checked />
+            Save messages to database
+          </label>
+          <button type="submit">Create Room</button>
+        </form>
+      </div>
+      
+      <!-- Room list -->
+      <div class="dropdown-section">
+        <h3>Available Rooms</h3>
+        <div id="roomList" class="dropdown-room-list">
+          <!-- Rooms will be loaded here -->
+        </div>
+      </div>
+    </div>
+    
+    <!-- Container for displaying chat messages -->
+    <div id="messages"></div>
+    
+    <!-- Input area -->
+    <div class="input-area">
+      <input id="messageInput" type="text" placeholder="Type a message..." />
+      <button onclick="sendMessage()">Send</button>
+    </div>
+  </div>
+
+  <!-- Include Socket.io client library -->
+  <script src="/socket.io/socket.io.js"></script>
+  <script src="/js/theme.js"></script>
+  <script src="/js/chat.js"></script>
+</body>
+</html>
+
+   

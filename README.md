@@ -2,8 +2,7 @@
 ### by James Hill
 
 A real-time multi-room chat application built with Node.js, Express.js, Socket.io, and MongoDB.
----
-![Chat App Screenshot](./assets/firstdemodeploy.png | width=500)
+
 ---
 
 ## Features
@@ -52,28 +51,35 @@ Visit: `http://<your-laptop-ip>:8080` from other devices on the same network.
 
 ```
 HokeyServer/
-├── views/                      # Frontend HTML views
-│   ├── lobby.html             # Room list/lobby page
-│   └── chat.html              # Individual room chat view
-├── controllers/               # Route controllers
-│   └── roomController.js      # Room CRUD operations
-├── database/
-│   ├── connection.js          # MongoDB connection manager
+├── src/                        # Server-side code
+│   ├── config/
+│   │   └── database.js        # MongoDB connection manager
 │   ├── models/
 │   │   ├── Message.js         # Message schema/model
 │   │   └── Room.js            # Room schema/model
-│   └── services/
-│       ├── chatService.js     # Message operations
-│       └── roomService.js     # Room operations (CRUD)
-├── assets/
-│   ├── style.css              # Global styles + room UI
-│   └── room.js                # Client-side room management
-├── index.js                   # Main server (Express + Socket.io)
-├── index.html                 # Original chat (preserved for backup)
-├── package.json               # Dependencies and scripts
-├── .env                       # Environment variables (not in git)
-├── .gitignore                 # Files to ignore
-└── README.md                  # This file
+│   ├── services/
+│   │   ├── chatService.js     # Message operations
+│   │   └── roomService.js     # Room operations (CRUD)
+│   ├── controllers/
+│   │   └── roomController.js  # Route controllers
+│   └── sockets/
+│       └── socketHandlers.js  # Socket.io connection handlers
+├── public/                     # Client-side code
+│   ├── views/
+│   │   ├── lobby.html         # Room list/lobby page
+│   │   └── chat.html          # Individual room chat view
+│   ├── js/
+│   │   ├── chat.js            # Chat page client logic
+│   │   ├── room.js            # Lobby page client logic
+│   │   └── theme.js           # Theme management (shared)
+│   ├── css/
+│       └── style.css          # Global styles + room UI
+│  
+├── index.js                    # Main server (Express + Socket.io)
+├── package.json                # Dependencies and scripts
+├── .env                        # Environment variables (not in git)
+├── .gitignore                  # Files to ignore
+└── README.md                   # This file
 ```
 
 ---
@@ -162,19 +168,6 @@ Response: { success: true, message: "Room deleted" }
 ## Database (MongoDB Atlas)
 
 This app uses MongoDB Atlas for persistent chat history and room data. You can use any MongoDB instance, but Atlas is recommended for easy cloud hosting.
-
-### Database Folder Structure
-
-```
-database/
-├── connection.js              # Handles MongoDB connection
-├── models/
-│   ├── Message.js            # Mongoose schema for chat messages
-│   └── Room.js               # Mongoose schema for rooms
-└── services/
-    ├── chatService.js        # Message operations (save/fetch/cleanup)
-    └── roomService.js        # Room operations (CRUD)
-```
 
 ### Environment Variables (.env)
 

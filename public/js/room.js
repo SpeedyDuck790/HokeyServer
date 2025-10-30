@@ -10,53 +10,10 @@ if (!username) {
 // Display username
 document.getElementById('usernameDisplay').textContent = `Logged in as: ${username}`;
 
+// Initialize theme
+initializeTheme();
+
 const socket = io(); // Connect to the server
-
-// --- Theme toggle ---
-let isDark = localStorage.getItem('hokeyTheme') === 'light' ? false : true;
-
-function setTheme(bg, text) {
-  document.documentElement.style.setProperty('--bg-color', bg);
-  document.documentElement.style.setProperty('--text-color', text);
-  document.documentElement.style.setProperty('--header-color', text);
-  if (bg === '#222') {
-    // Dark mode
-    document.documentElement.style.setProperty('--user-list-bg', '#333');
-    document.documentElement.style.setProperty('--messages-bg', '#222');
-    document.documentElement.style.setProperty('--button-bg', '#8e44ad');
-    document.documentElement.style.setProperty('--room-card-bg', '#333');
-    document.documentElement.style.setProperty('--room-card-hover', '#444');
-  } else {
-    // Light mode
-    document.documentElement.style.setProperty('--user-list-bg', '#f0f0f0');
-    document.documentElement.style.setProperty('--messages-bg', '#fafafa');
-    document.documentElement.style.setProperty('--button-bg', '#007bff');
-    document.documentElement.style.setProperty('--room-card-bg', '#f9f9f9');
-    document.documentElement.style.setProperty('--room-card-hover', '#e9e9e9');
-  }
-}
-
-function toggleTheme() {
-  isDark = !isDark;
-  if (isDark) {
-    setTheme('#222', '#fff');
-    document.getElementById('themeToggle').textContent = '☀️';
-    localStorage.setItem('hokeyTheme', 'dark');
-  } else {
-    setTheme('#fff', '#222');
-    document.getElementById('themeToggle').textContent = '🌙';
-    localStorage.setItem('hokeyTheme', 'light');
-  }
-}
-
-// Set initial theme
-if (isDark) {
-  setTheme('#222', '#fff');
-  document.getElementById('themeToggle').textContent = '☀️';
-} else {
-  setTheme('#fff', '#222');
-  document.getElementById('themeToggle').textContent = '🌙';
-}
 
 // Fetch and display rooms
 async function loadRooms() {

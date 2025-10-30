@@ -1,4 +1,4 @@
-const roomService = require('../database/services/roomService');
+const roomService = require('../services/roomService');
 
 // Room controller handles HTTP requests for room operations
 class RoomController {
