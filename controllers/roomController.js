@@ -46,11 +46,11 @@ class RoomController {
     /**
      * Create a new room
      * POST /api/rooms
-     * Body: { name, description, createdBy, isPublic, maxUsers }
+     * Body: { name, description, createdBy, isPublic, maxUsers, password, persistMessages }
      */
     async createRoom(req, res) {
         try {
-            const { name, description, createdBy, isPublic, maxUsers } = req.body;
+            const { name, description, createdBy, isPublic, maxUsers, password, persistMessages } = req.body;
             
             if (!name) {
                 return res.status(400).json({
@@ -64,7 +64,9 @@ class RoomController {
                 description,
                 createdBy,
                 isPublic,
-                maxUsers
+                maxUsers,
+                password,
+                persistMessages
             });
 
             res.status(201).json({

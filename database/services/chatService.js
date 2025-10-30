@@ -50,7 +50,6 @@ class ChatService {
 
             // Save the message to the database
             const savedMessage = await newMessage.save();
-            console.log(`💾 Message saved: ${username} in ${room}`);
 
             // Clean up old messages if we exceed the limit
             await this.cleanupOldMessages(room);

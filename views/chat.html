@@ -15,12 +15,17 @@
     </div>
     
     <div class="controls">
-      <!-- Settings menu -->
-      <div>
+
+      <!-- Settings menu and username input -->
+      <div style="display: flex; align-items: center; gap: 10px;">
         <button id="themeToggle" onclick="toggleTheme()" title="Toggle light/dark mode">🌙</button>
         <button id="roomMenuToggle" onclick="toggleRoomMenu()" title="Show/Hide Rooms">🏠 Rooms ▼</button>
+        <div class="username-box" style="position: static; background: none; box-shadow: none; padding: 0; border-radius: 0;">
+          <label for="usernameInput" style="font-size: 0.95em;">Username:</label>
+          <input id="usernameInput" type="text" maxlength="50" placeholder="Anon" style="width: 100px;" />
+        </div>
       </div>
-      
+
       <!-- Online users box -->
       <div>
         <button id="onlineUsersBtn" onclick="toggleUserDropdown()">
@@ -90,12 +95,20 @@
     const urlParams = new URLSearchParams(window.location.search);
     let currentRoom = urlParams.get('room') || 'global';
     
-    // Get username from localStorage or prompt
-    let username = localStorage.getItem('hokeyUsername');
-    if (!username) {
-      username = prompt("Enter your username:");
-      if (!username) username = "Anon";
-      localStorage.setItem('hokeyUsername', username);
+    // Username logic: use text box, fallback to 'Anon' if empty
+    let username = localStorage.getItem('hokeyUsername') || '';
+    window.addEventListener('DOMContentLoaded', () => {
+      const usernameInput = document.getElementById('usernameInput');
+      usernameInput.value = username;
+      usernameInput.addEventListener('input', function() {
+        username = usernameInput.value.trim();
+        localStorage.setItem('hokeyUsername', username);
+      });
+    });
+
+    function getCurrentUsername() {
+      const val = document.getElementById('usernameInput').value.trim();
+      return val ? val : 'Anon';
     }
     
     const socket = io(); // Connect to the server
@@ -278,31 +291,31 @@
         toggleRoomMenu();
         return;
       }
-      
+
       // Check if room requires password
       if (hasPassword && !knownPassword) {
         const password = prompt(`Enter password for room "${roomName}":`);
         if (!password) return;
         knownPassword = password;
       }
-      
+
       currentRoom = roomName;
       updateRoomTitle();
-      
+
       // Update URL without reload
       const newUrl = roomName === 'global' ? '/' : `/?room=${encodeURIComponent(roomName)}`;
       window.history.pushState({}, '', newUrl);
-      
+
       // Rejoin the new room with password if needed
       socket.emit('join room', { 
         room: currentRoom, 
-        username,
+        username: getCurrentUsername(),
         password: knownPassword 
       });
-      
+
       // Clear messages
       document.getElementById('messages').innerHTML = '';
-      
+
       // Close menu
       toggleRoomMenu();
     }
@@ -317,7 +330,7 @@
     function sendMessage() {
       const userInput = document.getElementById('messageInput');
       let userMsg = userInput.value;
-      
+
       userMsg = userMsg.trim();
 
       if (!userMsg) {
@@ -328,7 +341,7 @@
         alert("Message too long! (max 200 characters)");
         return;
       }
-     
+
       // Sanitize: escape < and > to prevent HTML injection
       userMsg = userMsg.replace(/</g, "&lt;").replace(/>/g, "&gt;");
 
@@ -336,8 +349,8 @@
       const timestamp = new Date().toISOString();
 
       socket.emit('chat message', {
-        username, 
-        userMsg, 
+        username: getCurrentUsername(),
+        userMsg,
         timestamp,
         room: currentRoom
       });
@@ -408,9 +421,35 @@
       }
     });
 
-    // On connect, join the room
-    socket.on('connect', function() {
-      socket.emit('join room', { room: currentRoom, username });
+    // On connect, join the room (prompt for password if needed)
+    socket.on('connect', async function() {
+      if (currentRoom !== 'global') {
+        try {
+          const res = await fetch(`/api/rooms/${encodeURIComponent(currentRoom)}`);
+          const data = await res.json();
+          if (!res.ok || !data.success) {
+            alert('Room not found or error fetching room info. Redirecting to global.');
+            switchRoom('global', false);
+            return;
+          }
+
+          if (data.room && data.room.hasPassword) {
+            const pw = prompt(`Enter password for room "${currentRoom}":`);
+            if (!pw) {
+              // user cancelled
+              switchRoom('global', false);
+              return;
+            }
+            socket.emit('join room', { room: currentRoom, username: getCurrentUsername(), password: pw });
+            return;
+          }
+        } catch (err) {
+          console.error('Error fetching room info on connect:', err);
+          // fallthrough to join without password
+        }
+      }
+
+      socket.emit('join room', { room: currentRoom, username: getCurrentUsername() });
     });
 
     // Handle disconnection

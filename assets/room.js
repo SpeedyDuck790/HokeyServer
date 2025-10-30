@@ -87,14 +87,19 @@ function displayRooms(rooms) {
   rooms.forEach(room => {
     const roomCard = document.createElement('div');
     roomCard.className = 'room-card';
+    
+    // Status indicators
+    const hasPassword = room.hasPassword ? '🔒' : '';
+    const saveMode = room.persistMessages ? '💾' : '🧠';
+    
     roomCard.innerHTML = `
       <div class="room-header">
-        <h3>${escapeHtml(room.name)}</h3>
+        <h3>${hasPassword} ${escapeHtml(room.name)}</h3>
         <span class="room-users">${room.activeUsers.length}/${room.maxUsers} users</span>
       </div>
       <p class="room-description">${escapeHtml(room.description || 'No description')}</p>
       <div class="room-footer">
-        <span class="room-messages">${room.messageCount} messages</span>
+        <span class="room-messages">${saveMode} ${room.messageCount} messages</span>
         <button onclick="joinRoom('${escapeHtml(room.name)}')">Join</button>
       </div>
     `;

@@ -101,13 +101,13 @@ io.on('connection', (socket) => {
   // Listen for user joining a room
   socket.on('join room', async (data) => {
     const { room, username, password } = data;
-    
-    // Verify password if room requires it
+
+    // Verify password if room requires it (do not allow empty string)
     if (USE_DATABASE && isDatabaseConnected) {
       try {
         const roomData = await roomService.getRoomByName(room);
         if (roomData && roomData.password) {
-          if (!password) {
+          if (!password || password.trim() === "") {
             socket.emit('room error', { message: 'Password required' });
             return;
           }
@@ -121,14 +121,14 @@ io.on('connection', (socket) => {
         console.error('Error verifying room access:', error.message);
       }
     }
-    
+
     currentRoom = room;
     currentUsername = username;
-    
+
     // Join the socket.io room
     socket.join(room);
-    console.log(`${username} joined room: ${room}`);
-    
+    console.log(`Join|${username}|${room}|`);
+
     // Add user to room in database if enabled
     if (USE_DATABASE && isDatabaseConnected) {
       try {
@@ -137,19 +137,19 @@ io.on('connection', (socket) => {
         console.error('Failed to add user to room in database:', error.message);
       }
     }
-    
+
     // Track user in memory
     if (!onlineUsersByRoom[room]) {
       onlineUsersByRoom[room] = {};
     }
     onlineUsersByRoom[room][socket.id] = username;
-    
+
     // Broadcast updated user list to room
     io.to(room).emit('user list', {
       room: room,
       users: Object.values(onlineUsersByRoom[room])
     });
-    
+
     // Send message history to the user if enabled
     if (msgHistoryKept) {
       const history = msgHistoryByRoom[room] || [];
@@ -184,12 +184,13 @@ io.on('connection', (socket) => {
     // Store message in database if enabled
     if (msgHistoryKept) {
       // Check if room wants messages persisted to database
-      let shouldPersist = true;
+      let shouldPersist = false; // Default to false (memory-only)
       if (USE_DATABASE && isDatabaseConnected) {
         try {
           const roomData = await roomService.getRoomByName(data.room);
-          shouldPersist = roomData ? roomData.persistMessages !== false : true;
-          
+          // Only persist if room explicitly says to persist (default rooms have persistMessages=true)
+          shouldPersist = roomData && roomData.persistMessages === true;
+
           // Try to save to database if room allows it
           if (shouldPersist) {
             await chatService.saveMessage({
@@ -199,9 +200,9 @@ io.on('connection', (socket) => {
             });
             // Increment room message count
             await roomService.incrementMessageCount(data.room);
-            console.log(`💾 Message saved to database: ${data.username} in ${data.room}`);
+            console.log(`Msg saved|${data.username}|${data.room}|Db|`);
           } else {
-            console.log(`🧠 Message kept in memory only: ${data.username} in ${data.room}`);
+            console.log(`Msg saved|${data.username}|${data.room}|NoDb|`);
           }
         } catch (error) {
           console.error('❌ Failed to save message to database:', error.message);
@@ -225,8 +226,6 @@ io.on('connection', (socket) => {
 
   // Handle client disconnection
   socket.on('disconnect', async () => {
-    console.log('A user disconnected');
-    
     if (currentRoom && onlineUsersByRoom[currentRoom]) {
       // Remove user from database if enabled
       if (USE_DATABASE && isDatabaseConnected) {
@@ -236,15 +235,18 @@ io.on('connection', (socket) => {
           console.error('Failed to remove user from room in database:', error.message);
         }
       }
-      
+
       // Remove from memory
       delete onlineUsersByRoom[currentRoom][socket.id];
-      
+
       // Broadcast updated user list to room
       io.to(currentRoom).emit('user list', {
         room: currentRoom,
         users: Object.values(onlineUsersByRoom[currentRoom])
       });
+
+      // Clean, compact leave log
+      console.log(`Leave|${currentUsername}|${currentRoom}|`);
     }
   });
 });

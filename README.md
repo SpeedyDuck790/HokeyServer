@@ -85,7 +85,7 @@ HokeyServer/
 1. **Visit Homepage** (`/`)
    - Enter your username (stored in browser)
    - See the lobby with all available rooms
-   - Default rooms: **global**, **general**, **random**
+  - Default room: **global**
 
 2. **Create a Room**
    - Fill in room name (required, max 50 characters)
@@ -219,7 +219,7 @@ USE_DATABASE=true
 
 ### How it Works
 - On server start, the app connects to MongoDB using the URI from `.env`.
-- **Default rooms** (global, general, random) are automatically created.
+- **Default room** (global) is automatically created.
 - Messages are saved to the database and loaded per room for new users.
 - Old messages are automatically cleaned up (max 1000 per room).
 - **Rooms track active users** in real-time with socket connections.

@@ -83,8 +83,7 @@ const roomSchema = new mongoose.Schema({
     }
 });
 
-// Index for faster queries
-roomSchema.index({ name: 1 });
+// Index for faster queries (name already indexed via unique: true)
 roomSchema.index({ isPublic: 1, createdAt: -1 });
 
 // Static method to get all public rooms

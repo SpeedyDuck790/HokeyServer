@@ -5,7 +5,7 @@ const crypto = require('crypto');
 // Room service to handle room operations (CRUD)
 class RoomService {
     constructor() {
-        this.defaultRooms = ['global', 'general', 'random'];
+    this.defaultRooms = ['global'];
     }
 
     /**
@@ -213,7 +213,6 @@ class RoomService {
             }
 
             await room.addUser(socketId, username);
-            console.log(`👤 User ${username} joined room: ${roomName}`);
             return room;
         } catch (error) {
             console.error('❌ Error adding user to room:', error.message);
@@ -261,8 +260,8 @@ class RoomService {
                 return true;
             }
 
-            // Hash the provided password and compare
-            const hashedPassword = crypto.createHash('sha256').update(password).digest('hex');
+            // Hash the provided password and compare (trim like we do when creating)
+            const hashedPassword = crypto.createHash('sha256').update(password.trim()).digest('hex');
             return hashedPassword === room.password;
         } catch (error) {
             console.error('❌ Error verifying password:', error.message);

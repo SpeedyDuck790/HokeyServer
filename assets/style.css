@@ -89,6 +89,21 @@ h1 {
   margin-bottom: 15px;
   align-items: center;
   justify-content: space-between;
+  position: relative; /* needed so the room button can be centered */
+}
+
+/* Username box inline with controls */
+.username-box {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+}
+
+/* Center the Rooms button in the controls area */
+#roomMenuToggle {
+  position: absolute;
+  left: 50%;
+  transform: translateX(-50%);
 }
 
 /* Online users dropdown */
