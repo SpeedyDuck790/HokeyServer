@@ -46,7 +46,7 @@
     const socket = io(); // Connect to the server
 
   // --- Theme toggle ---
-  let isDark = false;
+  let isDark = true; // Default to dark mode
   function setTheme(bg, text) {
     document.documentElement.style.setProperty('--bg-color', bg);
     document.documentElement.style.setProperty('--text-color', text);
@@ -73,8 +73,9 @@
       document.getElementById('themeToggle').textContent = '🌙';
     }
   }
-  // Set initial theme
-  setTheme('#fff', '#222');
+  // Set initial theme to dark mode
+  setTheme('#222', '#fff');
+  document.getElementById('themeToggle').textContent = '☀️';
 
     // Function to send a message to the server
     function sendMessage() {

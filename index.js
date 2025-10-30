@@ -1,9 +1,14 @@
+require('dotenv').config(); // Load environment variables
 const express = require('express');
 const path = require('path');
 const http = require('http');
 const { Server } = require('socket.io');
 const os = require('os');
 const { exec } = require('child_process');
+
+// Import database services
+const dbConnection = require('./database/connection');
+const chatService = require('./database/services/chatService');
 
 const app = express(); // Express is a web framework that simplifies server creation
 const server = http.createServer(app); // Create HTTP server
@@ -21,10 +26,32 @@ app.get('/', (req, res) => {
 
 // --- Message history feature ---
 const msgHistoryKept = true; // Set to false to disable message history
-let msgHistory = []; // Array to store message history
+let msgHistory = []; // Array to store message history (in-memory backup)
 
 // --- User tracking for online users ---
 let onlineUsers = {};
+
+// Initialize database connection
+async function initializeDatabase() {
+  try {
+    await dbConnection.connect();
+    console.log('📊 Database service initialized');
+    
+    // Load recent messages from database if history is enabled
+    if (msgHistoryKept) {
+      const recentMessages = await chatService.getRecentMessages('general', 50);
+      msgHistory = recentMessages.map(msg => ({
+        username: msg.username,
+        userMsg: msg.message,
+        timestamp: msg.timestamp
+      }));
+      console.log(`📜 Loaded ${msgHistory.length} recent messages from database`);
+    }
+  } catch (error) {
+    console.error('❌ Database initialization failed:', error.message);
+    console.log('⚠️ Running in memory-only mode');
+  }
+}
 
 io.on('connection', (socket) => {
   console.log('A user connected');
@@ -44,7 +71,7 @@ io.on('connection', (socket) => {
   }
 
   // Listen for chat messages from this client
-  socket.on('chat message', (data) => {
+  socket.on('chat message', async (data) => {
     // Server-side validation
     if (
         typeof data.userMsg !== 'string' ||
@@ -53,16 +80,36 @@ io.on('connection', (socket) => {
     ) {
         return; // Ignore invalid messages
     }
+    
     // Sanitize
     data.userMsg = data.userMsg.replace(/</g, "&lt;").replace(/>/g, "&gt;");
-    // Store message if enabled
+    
+    // Add timestamp if not present
+    if (!data.timestamp) {
+      data.timestamp = new Date().toISOString();
+    }
+    
+    // Store message in database if enabled
     if (msgHistoryKept) {
+      try {
+        await chatService.saveMessage({
+          username: data.username,
+          message: data.userMsg,
+          room: 'general'
+        });
+        console.log(`💾 Message saved to database: ${data.username}`);
+      } catch (error) {
+        console.error('❌ Failed to save message to database:', error.message);
+      }
+      
+      // Also store in memory as backup
       msgHistory.push(data);
       // Limit history size eg to last 100 messages
       if (msgHistory.length > 100) {
         msgHistory.shift();
       }
     }
+    
     // Broadcast the message to all clients
     io.emit('chat message', data);
   });
@@ -109,10 +156,44 @@ if (process.platform === 'win32' && !isLocal) {
   addFirewallRule(PORT);
 }
 
-server.listen(PORT, host, () => {
-  const localIP = getLocalIP();
-  console.log(`Server running on http://${host}:${PORT}`);
-  if (!isLocal) {
-    console.log(`Network access: http://${localIP}:${PORT}`);
+// Initialize database before starting server
+async function startServer() {
+  await initializeDatabase();
+  
+  server.listen(PORT, host, () => {
+    const localIP = getLocalIP();
+    console.log(`Server running on http://${host}:${PORT}`);
+    if (!isLocal) {
+      console.log(`Network access: http://${localIP}:${PORT}`);
+    }
+  });
+}
+
+// Handle graceful shutdown
+process.on('SIGINT', async () => {
+  console.log('\n🛑 Shutting down server...');
+  try {
+    await dbConnection.disconnect();
+    console.log('✅ Database disconnected');
+  } catch (error) {
+    console.error('❌ Error during shutdown:', error.message);
   }
+  process.exit(0);
+});
+
+process.on('SIGTERM', async () => {
+  console.log('\n🛑 Received SIGTERM, shutting down gracefully...');
+  try {
+    await dbConnection.disconnect();
+    console.log('✅ Database disconnected');
+  } catch (error) {
+    console.error('❌ Error during shutdown:', error.message);
+  }
+  process.exit(0);
+});
+
+// Start the application
+startServer().catch(error => {
+  console.error('❌ Failed to start server:', error.message);
+  process.exit(1);
 });
