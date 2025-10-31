@@ -63,7 +63,32 @@ const roomSchema = new mongoose.Schema({
     persistMessages: {
         type: Boolean,
         default: true
-    }
+    },
+    // Banned users list
+    bannedUsers: [{
+        userId: {
+            type: mongoose.Schema.Types.ObjectId,
+            ref: 'User',
+            required: true
+        },
+        bannedBy: {
+            type: mongoose.Schema.Types.ObjectId,
+            ref: 'User',
+            required: true
+        },
+        bannedAt: {
+            type: Date,
+            default: Date.now
+        },
+        expiresAt: {
+            type: Date,
+            default: null
+        },
+        reason: {
+            type: String,
+            default: ''
+        }
+    }]
 }, {
     timestamps: true, // Adds createdAt and updatedAt automatically
     toJSON: {

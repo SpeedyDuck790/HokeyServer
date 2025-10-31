@@ -161,6 +161,11 @@ function displayUserProfile(user) {
         <button onclick="logout()" style="width: 100%; margin-bottom: 10px; background: #f44336;">
           Logout
         </button>
+        ${user.profile?.badges?.includes('site-admin') ? `
+          <button onclick="showAdminPanel()" style="width: 100%; margin-bottom: 10px; background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); color: white; border: none; cursor: pointer; font-weight: bold;">
+            👑 Admin Panel
+          </button>
+        ` : ''}
       `}
     </div>
     

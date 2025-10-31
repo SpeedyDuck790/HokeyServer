@@ -530,15 +530,19 @@ async function createRoom(event) {
   }
   
   try {
+    const currentUser = JSON.parse(localStorage.getItem('hokeyCurrentUser') || '{}');
     const response = await fetch('/api/rooms', {
       method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
+      headers: { 
+        'Content-Type': 'application/json',
+        'Authorization': `Bearer ${localStorage.getItem('hokeyAuthToken') || ''}`
+      },
       body: JSON.stringify({
         name: roomName,
         description: roomDescription,
         password: roomPassword || undefined,
         persistMessages: saveToDatabase,
-        createdBy: username
+        createdBy: currentUser.username || getCurrentUsername()
       })
     });
     

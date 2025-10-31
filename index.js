@@ -31,8 +31,13 @@ app.use(express.json());
 app.use(express.static(path.join(__dirname, 'public')));
 
 // API Routes
+const adminRoutes = require('./src/routes/admin');
+const moderationRoutes = require('./src/routes/moderation');
+
 app.use('/api/auth', authRoutes);
 app.use('/api/users', userRoutes);
+app.use('/api/admin', adminRoutes);
+app.use('/api/moderation', moderationRoutes);
 
 // Serve main chat page (global chat with side menu) at root
 app.get('/', (req, res) => {
@@ -140,6 +145,9 @@ async function initializeDatabase() {
 }
 
 const socketHandlers = require('./src/sockets/socketHandlers');
+
+// Store io reference in app for controllers to access
+app.set('io', io);
 
 // Attach socket handlers (pass dynamic DB-state getter)
 socketHandlers.attachSocketHandlers(io, {
