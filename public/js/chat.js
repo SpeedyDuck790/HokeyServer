@@ -818,7 +818,7 @@ function createMessageElement(data) {
       <div class="reply-context">
         <div class="reply-bar"></div>
         <div class="reply-info">
-          <span class="reply-username">${escapeHtml(data.replyTo.username)}</span>
+          <span class="reply-username" onclick="viewUserProfile('${escapeHtml(data.replyTo.username)}')" style="cursor: pointer; text-decoration: underline;" title="View profile">${escapeHtml(data.replyTo.username)}</span>
           <span class="reply-time">[${replyTime}]</span>
           <span class="reply-message">${escapeHtml(data.replyTo.message)}</span>
         </div>
@@ -833,7 +833,7 @@ function createMessageElement(data) {
   messageHTML += `
     <div class="message-content">
       <span class="message-time">[${time}]</span>
-      <span class="message-username">${escapeHtml(data.username)}:</span>
+      <span class="message-username" onclick="viewUserProfile('${escapeHtml(data.username)}')" style="cursor: pointer; text-decoration: underline;" title="View profile">${escapeHtml(data.username)}:</span>
       <span class="message-text">${linkedMessage}</span>
       <button class="message-react-btn" onclick='showReactionPicker("${messageId}", event)' title="Add reaction">😊</button>
       <button class="message-reply-btn" onclick='replyToMessage(${JSON.stringify({

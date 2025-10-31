@@ -71,22 +71,12 @@ function updateSidebarDisplay() {
 
 // Switch to a room from sidebar
 function switchToRoom(roomName) {
-  // Emit leave current room
-  if (window.currentRoom) {
-    socket.emit('leave room', window.currentRoom);
+  // Use the global switchRoom function from chat.js
+  if (typeof switchRoom === 'function') {
+    switchRoom(roomName, false);
+  } else {
+    console.error('switchRoom function not available');
   }
-  
-  // Join new room
-  socket.emit('join room', roomName, getUsername());
-  window.currentRoom = roomName;
-  
-  // Update UI
-  document.getElementById('roomTitle').textContent = ` - ${roomName}`;
-  document.getElementById('pageTitle').textContent = `HokeyChat - ${roomName}`;
-  document.getElementById('messages').innerHTML = '';
-  
-  // Add to recent rooms
-  addToRecentRooms(roomName);
 }
 
 // Toggle sidebar collapsed state

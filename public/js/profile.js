@@ -496,3 +496,114 @@ async function handleRegister(event) {
     alert('Registration failed: ' + error.message);
   }
 }
+
+/**
+ * View another user's profile by username
+ */
+async function viewUserProfile(username) {
+  try {
+    const response = await fetch(`/api/users/profile/${encodeURIComponent(username)}`, {
+      headers: getAuthHeaders()
+    });
+
+    const data = await response.json();
+
+    if (!response.ok) {
+      throw new Error(data.error || 'Failed to load user profile');
+    }
+
+    showUserProfileModal(data.data.user);
+  } catch (error) {
+    console.error('View user profile error:', error);
+    alert('Failed to load profile: ' + error.message);
+  }
+}
+
+/**
+ * Show user profile in a modal
+ */
+function showUserProfileModal(user) {
+  const isGuest = user.isGuest;
+  const avatarUrl = user.profile?.avatar || `https://ui-avatars.com/api/?name=${encodeURIComponent(user.username)}&background=random`;
+
+  const modal = document.createElement('div');
+  modal.style.cssText = `
+    position: fixed;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    background: rgba(0,0,0,0.8);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    z-index: 10000;
+  `;
+  
+  modal.innerHTML = `
+    <div style="background: var(--bg-color); padding: 30px; border-radius: 10px; max-width: 500px; width: 90%; max-height: 80vh; overflow-y: auto;">
+      <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 20px;">
+        <h2 style="margin: 0;">User Profile</h2>
+        <button onclick="this.closest('.profile-modal').remove()" style="background: #f44336; padding: 8px 16px; border-radius: 6px; cursor: pointer; border: none; color: white;">✕ Close</button>
+      </div>
+      
+      <div class="profile-avatar" style="text-align: center; margin-bottom: 20px;">
+        <img src="${avatarUrl}" alt="Avatar" style="width: 120px; height: 120px; border-radius: 50%; display: inline-block;">
+      </div>
+      
+      <div class="profile-info">
+        <div class="profile-username" style="text-align: center; font-size: 1.5em; font-weight: bold; margin-bottom: 10px;">
+          ${user.username}
+          ${!isGuest ? '<span style="color: #4CAF50;">✓</span>' : '<span style="opacity: 0.6;">(Guest)</span>'}
+        </div>
+        
+        ${!isGuest && user.profile?.status ? `
+          <div style="text-align: center; margin-bottom: 10px;">
+            <span style="font-size: 1.2em;">
+              ${user.profile.status === 'online' ? '🟢' : user.profile.status === 'away' ? '🟡' : user.profile.status === 'dnd' ? '🔴' : '⚫'}
+            </span>
+            <span style="text-transform: capitalize;">${user.profile.status}</span>
+          </div>
+        ` : ''}
+        
+        ${!isGuest && user.profile?.customStatus ? `
+          <div style="text-align: center; font-style: italic; opacity: 0.8; margin-bottom: 15px;">
+            "${user.profile.customStatus}"
+          </div>
+        ` : ''}
+        
+        ${!isGuest && user.profile?.bio ? `
+          <div style="margin: 20px 0; padding: 15px; background: var(--input-bg); border-radius: 8px;">
+            <strong>Bio:</strong>
+            <p style="margin: 10px 0 0 0; white-space: pre-wrap;">${escapeHtml(user.profile.bio)}</p>
+          </div>
+        ` : ''}
+        
+        ${!isGuest && user.profile?.badges && user.profile.badges.length > 0 ? `
+          <div style="margin: 20px 0;">
+            <strong>Badges:</strong>
+            <div style="display: flex; gap: 10px; flex-wrap: wrap; margin-top: 10px; font-size: 1.5em;">
+              ${user.profile.badges.map(badge => `<span title="${badge}">${getBadgeEmoji(badge)}</span>`).join('')}
+            </div>
+          </div>
+        ` : ''}
+        
+        ${!isGuest ? `
+          <div style="margin-top: 20px; text-align: center; opacity: 0.7; font-size: 0.9em;">
+            Joined ${new Date(user.createdAt).toLocaleDateString()}
+          </div>
+        ` : ''}
+      </div>
+    </div>
+  `;
+  
+  modal.className = 'profile-modal';
+  document.body.appendChild(modal);
+  
+  // Close on outside click
+  modal.addEventListener('click', function(e) {
+    if (e.target === modal) {
+      modal.remove();
+    }
+  });
+}
