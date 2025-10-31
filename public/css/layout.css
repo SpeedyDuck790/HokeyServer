@@ -1,0 +1,98 @@
+/*
+  Layout - Structure and Containers
+  Main page structure, containers, and positioning
+*/
+
+body {
+  background: var(--bg-color);
+  color: var(--text-color);
+  font-family: Arial, sans-serif;
+  margin: 0;
+  padding: 10px;
+  max-width: 800px;
+  margin: 0 auto;
+  min-height: 100vh;
+  box-sizing: border-box;
+}
+
+/* Container for the entire app */
+.chat-container {
+  display: flex;
+  flex-direction: column;
+  height: 100vh;
+  max-height: 100vh;
+}
+
+/* Lobby container */
+.lobby-container {
+  display: flex;
+  flex-direction: column;
+  min-height: 100vh;
+  padding-bottom: 20px;
+}
+
+/* Header section */
+.header {
+  text-align: center;
+  margin-bottom: 20px;
+  padding: 20px 0;
+}
+
+/* Chat title with dynamic coloring */
+h1 {
+  color: var(--header-color);
+  margin: 0;
+  font-size: 2.5em;
+  font-weight: bold;
+  text-shadow: 2px 2px 4px rgba(0,0,0,0.1);
+}
+
+.hokey {
+  color: var(--button-bg);
+}
+
+.chat {
+  color: var(--text-color);
+}
+
+/* Subtitle */
+.subtitle {
+  margin: 10px 0 0 0;
+  font-style: italic;
+  opacity: 0.8;
+  font-size: 1.1em;
+  color: var(--text-color);
+}
+
+/* Settings and controls area */
+.controls {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 10px;
+  margin-bottom: 15px;
+  align-items: center;
+  justify-content: space-between;
+  position: relative;
+}
+
+/* Username box inline with controls */
+.username-box {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+}
+
+/* Center the Rooms button in the controls area */
+#roomMenuToggle {
+  position: absolute;
+  left: 50%;
+  transform: translateX(-50%);
+}
+
+/* Online users dropdown */
+#userDropdown {
+  background: var(--user-list-bg);
+  border-radius: 4px;
+  max-height: 150px;
+  overflow-y: auto;
+}

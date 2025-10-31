@@ -101,7 +101,36 @@ function attachSocketHandlers(io, options = {}) {
 
       // Send message history to the user if enabled
       if (msgHistoryKept) {
-        const history = msgHistoryByRoom[room] || [];
+        let history = [];
+        
+        // Try to load from database first if enabled
+        if (USE_DATABASE && getIsDbConnected()) {
+          try {
+            const roomData = await roomService.getRoomByName(room);
+            if (roomData && roomData.persistMessages) {
+              // Load messages from database
+              const dbMessages = await chatService.getLimitedMessages(room, 50);
+              // Convert to plain objects and ensure _id is included
+              history = dbMessages.map(msg => {
+                const obj = msg.toObject ? msg.toObject() : msg;
+                return {
+                  ...obj,
+                  _id: obj._id ? obj._id.toString() : undefined,
+                  userMsg: obj.message // Map 'message' field to 'userMsg' for frontend
+                };
+              });
+              console.log(`Loaded ${history.length} messages from database for room: ${room}`);
+            }
+          } catch (error) {
+            console.error('Error loading message history from database:', error.message);
+          }
+        }
+        
+        // Fall back to memory if no database messages
+        if (history.length === 0) {
+          history = msgHistoryByRoom[room] || [];
+        }
+        
         socket.emit('message history', history);
       }
     });
@@ -137,6 +166,8 @@ function attachSocketHandlers(io, options = {}) {
       if (msgHistoryKept) {
         // Check if room wants messages persisted to database
         let shouldPersist = false; // Default to false (memory-only)
+        let savedMessageId = null;
+        
         if (USE_DATABASE && getIsDbConnected()) {
           try {
             const roomData = await roomService.getRoomByName(data.room);
@@ -162,10 +193,12 @@ function attachSocketHandlers(io, options = {}) {
                 };
               }
 
-              await chatService.saveMessage(messageData);
+              const savedMessage = await chatService.saveMessage(messageData);
+              savedMessageId = savedMessage._id.toString();
+              console.log(`Msg saved|${data.username}|${data.room}|${messageType}|Db|`);
+              
               // Increment room message count
               await roomService.incrementMessageCount(data.room);
-              console.log(`Msg saved|${data.username}|${data.room}|${messageType}|Db|`);
             } else {
               console.log(`Msg saved|${data.username}|${data.room}|${messageType}|NoDb|`);
             }
@@ -174,8 +207,12 @@ function attachSocketHandlers(io, options = {}) {
           }
         }
 
-        // Always store in memory as backup (include message type)
-        const memoryCopy = { ...data, messageType };
+        // Always store in memory as backup (include message type and _id if saved)
+        const memoryCopy = { 
+          ...data, 
+          messageType,
+          _id: savedMessageId // Include database ID if available
+        };
         if (!msgHistoryByRoom[data.room]) {
           msgHistoryByRoom[data.room] = [];
         }
@@ -186,8 +223,21 @@ function attachSocketHandlers(io, options = {}) {
         }
       }
 
-      // Broadcast the message to all clients in the room (include message type and reply context)
-      io.to(data.room).emit('chat message', { ...data, messageType });
+      // Broadcast the message to all clients in the room (include message type, reply context, and _id)
+      const broadcastData = { 
+        ...data, 
+        messageType
+      };
+      
+      // Add _id from memory copy if it exists
+      if (msgHistoryByRoom[data.room] && msgHistoryByRoom[data.room].length > 0) {
+        const lastMsg = msgHistoryByRoom[data.room][msgHistoryByRoom[data.room].length - 1];
+        if (lastMsg._id) {
+          broadcastData._id = lastMsg._id;
+        }
+      }
+      
+      io.to(data.room).emit('chat message', broadcastData);
     });
 
     // Handle client disconnection

@@ -1,0 +1,291 @@
+/*
+  Rooms - Room cards, lists, dropdowns, and room creation
+  All room-related UI components and styling
+*/
+
+/* Room dropdown menu (top dropdown instead of side menu) */
+.room-dropdown {
+  display: none;
+  position: absolute;
+  top: 160px;
+  left: 50%;
+  transform: translateX(-50%);
+  width: 95%;
+  max-width: 1200px;
+  background: var(--side-menu-bg);
+  border: 2px solid #ccc;
+  border-radius: 8px;
+  box-shadow: 0 4px 20px rgba(0,0,0,0.2);
+  z-index: 1000;
+  padding: 25px;
+  box-sizing: border-box;
+  max-height: 80vh;
+  overflow-y: auto;
+}
+
+.dropdown-section {
+  margin-bottom: 20px;
+  padding-bottom: 15px;
+  border-bottom: 1px solid #ccc;
+}
+
+.dropdown-section:last-child {
+  border-bottom: none;
+}
+
+.dropdown-section h3 {
+  margin-top: 0;
+  margin-bottom: 12px;
+  color: var(--header-color);
+  font-size: 1.1em;
+}
+
+.dropdown-section form {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+
+.dropdown-section input[type="text"],
+.dropdown-section input[type="password"] {
+  padding: 10px;
+  font-size: 0.95em;
+  border: 1px solid #ccc;
+  border-radius: 4px;
+  background: var(--bg-color);
+  color: var(--text-color);
+}
+
+.dropdown-section label {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-size: 0.95em;
+  color: var(--text-color);
+}
+
+.dropdown-section label input[type="checkbox"] {
+  width: auto;
+}
+
+.dropdown-section button[type="submit"] {
+  width: 100%;
+  padding: 10px;
+  font-size: 1em;
+}
+
+.dropdown-room-list {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
+  gap: 12px;
+  max-height: 400px;
+  overflow-y: auto;
+}
+
+/* Room side menu (deprecated - keeping for compatibility) */
+.room-side-menu {
+  display: none;
+}
+
+.room-item {
+  padding: 12px;
+  background: var(--messages-bg);
+  border: 1px solid #ccc;
+  border-radius: 6px;
+  cursor: pointer;
+  transition: background 0.2s, transform 0.1s;
+}
+
+.room-item:hover {
+  background: var(--room-item-hover);
+  transform: translateX(-3px);
+}
+
+.room-item.active {
+  border-color: var(--button-bg);
+  border-width: 2px;
+  background: var(--room-item-hover);
+}
+
+/* Global room gets gold highlight */
+.room-item.global-room {
+  background: linear-gradient(135deg, rgba(255, 215, 0, 0.15), rgba(255, 223, 0, 0.05));
+  border-color: gold;
+}
+
+.room-item.global-room.active {
+  border-color: gold;
+  border-width: 3px;
+  box-shadow: 0 0 10px rgba(255, 215, 0, 0.5);
+}
+
+.room-item-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 5px;
+}
+
+.room-item-header strong {
+  color: var(--button-bg);
+  font-size: 1.05em;
+}
+
+.room-item-count {
+  font-size: 0.85em;
+  color: var(--text-color);
+  opacity: 0.7;
+}
+
+.room-item-desc {
+  margin: 0;
+  font-size: 0.9em;
+  color: var(--text-color);
+  opacity: 0.7;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.room-item-stats {
+  margin: 5px 0 0 0;
+  font-size: 0.85em;
+  color: var(--text-color);
+  opacity: 0.6;
+}
+
+.no-rooms {
+  text-align: center;
+  color: var(--text-color);
+  opacity: 0.5;
+  font-style: italic;
+}
+
+/* Room creation section */
+.room-creation {
+  margin: 20px 0;
+  padding: 20px;
+  background: var(--messages-bg);
+  border-radius: 8px;
+  border: 1px solid #ccc;
+}
+
+.room-creation h2 {
+  margin-top: 0;
+  color: var(--header-color);
+  font-size: 1.5em;
+}
+
+.room-creation form {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+.room-creation input[type="text"],
+.room-creation input[type="password"] {
+  padding: 12px;
+  font-size: 1em;
+  border: 1px solid #ccc;
+  border-radius: 6px;
+  box-sizing: border-box;
+  background: var(--bg-color);
+  color: var(--text-color);
+}
+
+.room-creation label {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-size: 0.95em;
+  color: var(--text-color);
+}
+
+.room-creation label input[type="checkbox"] {
+  width: auto;
+}
+
+/* Room list section */
+.room-list-section {
+  margin: 20px 0;
+}
+
+.room-list-section h2 {
+  color: var(--header-color);
+  font-size: 1.8em;
+  margin-bottom: 15px;
+}
+
+.room-list {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
+  gap: 15px;
+}
+
+/* Room card */
+.room-card {
+  background: var(--room-card-bg);
+  border: 1px solid #ccc;
+  border-radius: 8px;
+  padding: 16px;
+  transition: background 0.2s, transform 0.2s;
+  cursor: pointer;
+}
+
+/* Global room card gets gold styling */
+.room-card.global-room {
+  background: linear-gradient(135deg, rgba(255, 215, 0, 0.15), rgba(255, 223, 0, 0.05));
+  border-color: gold;
+  border-width: 2px;
+}
+
+.room-card:hover {
+  background: var(--room-card-hover);
+  transform: translateY(-2px);
+  box-shadow: 0 4px 8px rgba(0,0,0,0.1);
+}
+
+.room-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 10px;
+}
+
+.room-header h3 {
+  margin: 0;
+  color: var(--button-bg);
+  font-size: 1.3em;
+}
+
+.room-users {
+  font-size: 0.9em;
+  color: var(--text-color);
+  opacity: 0.7;
+}
+
+.room-description {
+  margin: 10px 0;
+  color: var(--text-color);
+  opacity: 0.8;
+  font-size: 0.95em;
+  min-height: 40px;
+}
+
+.room-footer {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-top: 15px;
+}
+
+.room-messages {
+  font-size: 0.9em;
+  color: var(--text-color);
+  opacity: 0.7;
+}
+
+.room-footer button {
+  padding: 8px 16px;
+  font-size: 0.95em;
+}

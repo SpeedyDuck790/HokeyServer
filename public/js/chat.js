@@ -355,8 +355,24 @@ socket.on('user list', function(data) {
 
 // Listen for room errors (like wrong password)
 socket.on('room error', function(data) {
-  alert(data.message);
-  // Go back to global
+  const message = data.message || 'Room error';
+  
+  // If it's a password error, prompt for password and retry
+  if (message.includes('Password required') || message.includes('Incorrect password')) {
+    const password = prompt(`${message}\n\nEnter password for room "${currentRoom}":`);
+    if (password && password.trim()) {
+      // Retry joining with password
+      socket.emit('join room', { 
+        room: currentRoom, 
+        username: getCurrentUsername(),
+        password: password.trim()
+      });
+      return;
+    }
+  }
+  
+  // If user cancelled or other error, show alert and go back to global
+  alert(message);
   switchRoom('global', false);
 });
 

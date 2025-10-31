@@ -1,0 +1,66 @@
+/*
+  Responsive - Mobile and tablet responsive design
+  Media queries for smaller screens
+*/
+
+/* Mobile responsive design */
+@media (max-width: 768px) {
+  body {
+    padding: 5px;
+  }
+  
+  .header {
+    padding: 15px 0;
+    margin-bottom: 15px;
+  }
+  
+  h1 {
+    font-size: 2em;
+  }
+  
+  .subtitle {
+    font-size: 1em;
+  }
+  
+  .controls {
+    flex-direction: column;
+    align-items: stretch;
+    gap: 8px;
+  }
+  
+  #messages {
+    min-height: 250px;
+    max-height: 50vh;
+    padding: 8px;
+  }
+  
+  .input-area {
+    flex-direction: column;
+    gap: 8px;
+  }
+  
+  #messageInput {
+    padding: 15px;
+    font-size: 16px; /* Prevents zoom on iOS */
+  }
+  
+  button {
+    padding: 12px;
+    font-size: 1.1em;
+    width: 100%;
+  }
+  
+  .room-list {
+    grid-template-columns: 1fr;
+  }
+  
+  .room-creation {
+    padding: 15px;
+  }
+  
+  .room-dropdown {
+    width: 95%;
+    max-width: none;
+    top: 140px;
+  }
+}

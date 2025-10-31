@@ -1,0 +1,22 @@
+/*
+  Main CSS - Imports all modular CSS files
+  Import order matters: variables first, responsive last
+*/
+
+/* 1. Variables - CSS custom properties */
+@import url('variables.css');
+
+/* 2. Layout - Page structure and containers */
+@import url('layout.css');
+
+/* 3. Messages - Chat messages and reply UI */
+@import url('messages.css');
+
+/* 4. Components - Buttons, inputs, and UI elements */
+@import url('components.css');
+
+/* 5. Rooms - Room cards, lists, and dropdowns */
+@import url('rooms.css');
+
+/* 6. Responsive - Mobile and tablet styles */
+@import url('responsive.css');

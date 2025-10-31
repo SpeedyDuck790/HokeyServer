@@ -1,0 +1,66 @@
+/*
+  Components - Buttons, Inputs, and Form Elements
+  Reusable UI components like buttons, inputs, and dropdowns
+*/
+
+/* Input area */
+.input-area {
+  display: flex;
+  gap: 8px;
+  margin-top: 0;
+  padding-top: 0;
+}
+
+/* Message input box */
+#messageInput {
+  flex: 1;
+  padding: 12px;
+  font-size: 1em;
+  border: 1px solid #ccc;
+  border-radius: 6px;
+  box-sizing: border-box;
+}
+
+/* Buttons (send, theme, etc.) */
+button {
+  padding: 8px 16px;
+  font-size: 1em;
+  background: var(--button-bg);
+  color: var(--button-text);
+  border: none;
+  border-radius: 6px;
+  cursor: pointer;
+  white-space: nowrap;
+  min-width: 60px;
+}
+
+button:hover {
+  opacity: 0.8;
+}
+
+/* Back to lobby button */
+.back-button {
+  background: transparent;
+  color: var(--button-bg);
+  border: 2px solid var(--button-bg);
+  padding: 8px 16px;
+  font-weight: bold;
+}
+
+.back-button:hover {
+  background: var(--button-bg);
+  color: white;
+}
+
+/* Dropdown menu styling */
+.dropdown-menu {
+  display: none;
+  position: absolute;
+  background: var(--user-list-bg);
+  border: 1px solid #ccc;
+  border-radius: 6px;
+  padding: 8px;
+  z-index: 100;
+  min-width: 150px;
+  box-shadow: 0 2px 8px rgba(0,0,0,0.1);
+}

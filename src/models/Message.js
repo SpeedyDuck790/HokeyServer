@@ -38,8 +38,8 @@ const messageSchema = new mongoose.Schema({
     // Reference to the message being replied to (for reply type messages)
     replyTo: {
         messageId: {
-            type: mongoose.Schema.Types.ObjectId,
-            ref: 'Message'
+            type: String, // Changed from ObjectId to String to support both MongoDB IDs and timestamps
+            required: false
         },
         username: String,
         message: String,

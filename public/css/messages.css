@@ -1,0 +1,170 @@
+/*
+  Messages - Chat message styling and reply features
+  All message display, reply UI, and message interactions
+*/
+
+/* Chat messages area */
+#messages {
+  flex: 1;
+  margin-bottom: 10px;
+  min-height: 300px;
+  max-height: 60vh;
+  overflow-y: auto;
+  border: 1px solid #ccc;
+  padding: 8px;
+  background: var(--messages-bg);
+  border-radius: 8px;
+  word-wrap: break-word;
+}
+
+/* Individual message styling */
+.message {
+  margin-bottom: 2px;
+  padding: 6px;
+  border-radius: 4px;
+  position: relative;
+  transition: background-color 0.2s;
+}
+
+.message:hover {
+  background-color: rgba(0, 0, 0, 0.03);
+}
+
+.message:hover .message-reply-btn {
+  opacity: 1;
+}
+
+/* Message content */
+.message-content {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  flex-wrap: wrap;
+}
+
+.message-time {
+  color: #666;
+  font-size: 0.85em;
+}
+
+.message-username {
+  font-weight: bold;
+  color: var(--button-bg);
+}
+
+.message-text {
+  flex: 1;
+}
+
+/* Reply button on messages */
+.message-reply-btn {
+  opacity: 0;
+  padding: 2px 6px;
+  font-size: 0.85em;
+  background: rgba(0, 123, 255, 0.1);
+  color: var(--button-bg);
+  border: 1px solid var(--button-bg);
+  border-radius: 3px;
+  cursor: pointer;
+  transition: opacity 0.2s, background-color 0.2s;
+  margin-left: auto;
+}
+
+.message-reply-btn:hover {
+  background: var(--button-bg);
+  color: white;
+}
+
+/* Reply context (shown in messages that are replies) */
+.reply-context {
+  display: flex;
+  gap: 6px;
+  margin-bottom: 4px;
+  padding: 4px;
+  background: rgba(0, 123, 255, 0.05);
+  border-radius: 3px;
+  font-size: 0.85em;
+}
+
+.reply-bar {
+  width: 2px;
+  background: var(--button-bg);
+  border-radius: 2px;
+  flex-shrink: 0;
+}
+
+.reply-info {
+  display: flex;
+  flex-direction: row;
+  gap: 6px;
+  align-items: center;
+}
+
+.reply-username {
+  font-weight: bold;
+  color: var(--button-bg);
+  font-size: 0.9em;
+}
+
+.reply-time {
+  color: #999;
+  font-size: 0.85em;
+}
+
+.reply-message {
+  color: #666;
+  font-style: italic;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  max-width: 400px;
+}
+
+/* Reply preview bar (shown when user is replying) */
+.reply-preview {
+  display: none;
+  align-items: center;
+  gap: 8px;
+  padding: 6px 8px;
+  margin-bottom: 8px;
+  background: rgba(0, 123, 255, 0.1);
+  border-left: 3px solid var(--button-bg);
+  border-radius: 4px;
+}
+
+.reply-preview-content {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+
+.reply-preview-label {
+  font-weight: bold;
+  color: var(--button-bg);
+  font-size: 0.85em;
+}
+
+.reply-preview-message {
+  color: #666;
+  font-style: italic;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.reply-preview-cancel {
+  padding: 3px 8px;
+  background: rgba(255, 0, 0, 0.1);
+  color: #d32f2f;
+  border: 1px solid #d32f2f;
+  border-radius: 3px;
+  cursor: pointer;
+  font-size: 1em;
+  min-width: auto;
+}
+
+.reply-preview-cancel:hover {
+  background: #d32f2f;
+  color: white;
+}

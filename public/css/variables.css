@@ -1,0 +1,19 @@
+/*
+  CSS Variables - Theme Colors and Settings
+  These variables can be changed with JavaScript for theme switching
+*/
+
+:root {
+  --bg-color: #fff;           /* Background color */
+  --text-color: #222;         /* Main text color */
+  --font-size: 16px;          /* Base font size */
+  --header-color: #111;       /* Header color */
+  --user-list-bg: #f0f0f0;    /* User dropdown background */
+  --messages-bg: #fafafa;     /* Messages box background */
+  --button-bg: #007bff;       /* Button background - blue for light mode */
+  --button-text: #fff;        /* Button text color */
+  --room-card-bg: #f9f9f9;    /* Room card background */
+  --room-card-hover: #e9e9e9; /* Room card hover background */
+  --side-menu-bg: #f9f9f9;    /* Side menu background */
+  --room-item-hover: #e9e9e9; /* Room item hover */
+}
