@@ -29,7 +29,7 @@ const userSchema = new mongoose.Schema({
     trim: true,
     minlength: 2,
     maxlength: 30,
-    match: [/^[a-zA-Z0-9_-]+$/, 'Username can only contain letters, numbers, underscores, and hyphens']
+    match: [/^[a-zA-Z0-9_\- ]+$/, 'Username can only contain letters, numbers, underscores, hyphens, and spaces']
   },
   displayName: {
     type: String,

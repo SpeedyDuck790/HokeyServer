@@ -334,11 +334,13 @@ async function handleUpgrade(event) {
   
   try {
     const user = await upgradeGuest(email, password, username || undefined);
-    alert('Account created successfully! Welcome to HokeyChat! 🎉');
-    document.querySelector('.modal').remove();
+    alert('Account created successfully! Welcome to HokeyChat! 🎉\n\nReloading to apply changes...');
     
-    // Reload profile
-    displayUserProfile(user);
+    // Update current user globally
+    window.currentUser = user;
+    
+    // Reload the page to refresh socket connection with new user
+    window.location.reload();
   } catch (error) {
     alert('Failed to create account: ' + error.message);
   }
@@ -444,7 +446,8 @@ function showRegisterModal() {
           id="registerUsername" 
           placeholder="Username" 
           required
-          pattern="[a-zA-Z0-9_-]+"
+          pattern="[a-zA-Z0-9_\\- ]+"
+          title="Username can only contain letters, numbers, underscores, hyphens, and spaces"
           minlength="2"
           maxlength="30"
           style="width: 100%; padding: 10px; margin-bottom: 10px; border-radius: 6px; background: var(--input-bg); color: var(--text-color); border: 1px solid var(--border-color);">

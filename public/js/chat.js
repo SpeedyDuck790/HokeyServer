@@ -593,8 +593,11 @@ function switchRoom(roomName, hasPassword, knownPassword) {
   // Clear messages
   document.getElementById('messages').innerHTML = '';
 
-  // Close menu
-  toggleRoomMenu();
+  // Close menu (but not on initial connection to global)
+  const dropdown = document.getElementById('roomDropdown');
+  if (dropdown && dropdown.style.display !== 'none') {
+    toggleRoomMenu();
+  }
 }
 
 /**
