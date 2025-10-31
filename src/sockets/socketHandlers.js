@@ -113,10 +113,13 @@ function attachSocketHandlers(io, options = {}) {
               // Convert to plain objects and ensure _id is included
               history = dbMessages.map(msg => {
                 const obj = msg.toObject ? msg.toObject() : msg;
+                // Convert reactions Map to plain object
+                const reactions = obj.reactions ? Object.fromEntries(obj.reactions) : {};
                 return {
                   ...obj,
                   _id: obj._id ? obj._id.toString() : undefined,
-                  userMsg: obj.message // Map 'message' field to 'userMsg' for frontend
+                  userMsg: obj.message, // Map 'message' field to 'userMsg' for frontend
+                  reactions: reactions // Convert Map to object for JSON serialization
                 };
               });
               console.log(`Loaded ${history.length} messages from database for room: ${room}`);
@@ -238,6 +241,46 @@ function attachSocketHandlers(io, options = {}) {
       }
       
       io.to(data.room).emit('chat message', broadcastData);
+    });
+
+    // Handle typing indicators
+    socket.on('typing', (data) => {
+      socket.to(data.room).emit('user typing', {
+        room: data.room,
+        username: data.username
+      });
+    });
+
+    socket.on('stop typing', (data) => {
+      socket.to(data.room).emit('user stop typing', {
+        room: data.room,
+        username: currentUsername
+      });
+    });
+
+    // Handle message reactions
+    socket.on('toggle reaction', async (data) => {
+      const { messageId, emoji, username, room } = data;
+      
+      if (USE_DATABASE && getIsDbConnected()) {
+        try {
+          const Message = require('../models/Message');
+          const message = await Message.findById(messageId);
+          
+          if (message) {
+            await message.toggleReaction(emoji, username);
+            
+            // Broadcast reaction update to room
+            io.to(room).emit('reaction update', {
+              messageId,
+              room,
+              reactions: Object.fromEntries(message.reactions)
+            });
+          }
+        } catch (error) {
+          console.error('Error toggling reaction:', error.message);
+        }
+      }
     });
 
     // Handle client disconnection

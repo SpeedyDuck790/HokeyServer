@@ -7,9 +7,18 @@ let currentRoom = urlParams.get('room') || 'global';
 // Username logic: use text box, fallback to 'Anon' if empty
 let username = localStorage.getItem('hokeyUsername') || '';
 
+// Track unread messages per room
+let unreadCounts = JSON.parse(localStorage.getItem('unreadCounts') || '{}');
+let lastMessages = JSON.parse(localStorage.getItem('lastMessages') || '{}');
+
 window.addEventListener('DOMContentLoaded', () => {
   // Initialize theme
   initializeTheme();
+  
+  // Request notification permission
+  if ('Notification' in window && Notification.permission === 'default') {
+    Notification.requestPermission();
+  }
   
   const usernameInput = document.getElementById('usernameInput');
   usernameInput.value = username;
@@ -23,6 +32,18 @@ window.addEventListener('DOMContentLoaded', () => {
     if (event.key === 'Enter') {
       sendMessage();
     }
+  });
+  
+  // Emit typing event when user types
+  let typingTimer;
+  const typingTimeout = 2000; // Stop showing typing after 2 seconds of no input
+  
+  document.getElementById('messageInput').addEventListener('input', function() {
+    socket.emit('typing', { room: currentRoom, username: getCurrentUsername() });
+    clearTimeout(typingTimer);
+    typingTimer = setTimeout(() => {
+      socket.emit('stop typing', { room: currentRoom });
+    }, typingTimeout);
   });
   
   // Close dropdown when clicking outside
@@ -41,6 +62,34 @@ window.addEventListener('DOMContentLoaded', () => {
 function getCurrentUsername() {
   const val = document.getElementById('usernameInput').value.trim();
   return val ? val : 'Anon';
+}
+
+/**
+ * Format timestamp to relative time (Today, Yesterday, etc.)
+ */
+function formatRelativeTime(timestamp) {
+  if (!timestamp) return '';
+  
+  const messageDate = new Date(timestamp);
+  const now = new Date();
+  const today = new Date(now.getFullYear(), now.getMonth(), now.getDate());
+  const messageDay = new Date(messageDate.getFullYear(), messageDate.getMonth(), messageDate.getDate());
+  
+  const diffTime = today - messageDay;
+  const diffDays = Math.floor(diffTime / (1000 * 60 * 60 * 24));
+  
+  const timeStr = messageDate.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
+  
+  if (diffDays === 0) {
+    return `Today ${timeStr}`;
+  } else if (diffDays === 1) {
+    return `Yesterday ${timeStr}`;
+  } else if (diffDays < 7) {
+    const dayName = messageDate.toLocaleDateString([], { weekday: 'short' });
+    return `${dayName} ${timeStr}`;
+  } else {
+    return messageDate.toLocaleDateString([], { month: 'short', day: 'numeric' }) + ' ' + timeStr;
+  }
 }
 
 // Socket.io connection
@@ -230,6 +279,81 @@ function escapeHtml(text) {
   return div.innerHTML;
 }
 
+/**
+ * Detect URLs and convert to clickable links with previews
+ */
+function linkifyText(text) {
+  const urlRegex = /(https?:\/\/[^\s]+)/g;
+  return text.replace(urlRegex, function(url) {
+    return `<a href="${url}" target="_blank" rel="noopener noreferrer" class="message-link">${url}</a>`;
+  });
+}
+
+// --- Reactions Feature ---
+
+const availableEmojis = ['👍', '❤️', '😂', '😮', '😢', '🎉', '🔥', '👏'];
+let currentReactionPicker = null;
+
+/**
+ * Show reaction picker for a message
+ */
+function showReactionPicker(messageId, event) {
+  event.stopPropagation();
+  
+  // Remove existing picker
+  if (currentReactionPicker) {
+    currentReactionPicker.remove();
+  }
+  
+  // Create picker
+  const picker = document.createElement('div');
+  picker.className = 'reaction-picker show';
+  picker.id = 'reactionPicker';
+  
+  availableEmojis.forEach(emoji => {
+    const option = document.createElement('span');
+    option.className = 'reaction-option';
+    option.textContent = emoji;
+    option.onclick = (e) => {
+      e.stopPropagation();
+      toggleReaction(messageId, emoji);
+      picker.remove();
+      currentReactionPicker = null;
+    };
+    picker.appendChild(option);
+  });
+  
+  // Position picker
+  const button = event.target;
+  const rect = button.getBoundingClientRect();
+  picker.style.position = 'absolute';
+  picker.style.top = `${rect.bottom + 5}px`;
+  picker.style.left = `${rect.left}px`;
+  
+  document.body.appendChild(picker);
+  currentReactionPicker = picker;
+}
+
+/**
+ * Toggle a reaction on a message
+ */
+function toggleReaction(messageId, emoji) {
+  socket.emit('toggle reaction', {
+    messageId,
+    emoji,
+    username: getCurrentUsername(),
+    room: currentRoom
+  });
+}
+
+// Close reaction picker when clicking outside
+document.addEventListener('click', () => {
+  if (currentReactionPicker) {
+    currentReactionPicker.remove();
+    currentReactionPicker = null;
+  }
+});
+
 // --- Reply Feature ---
 
 let replyingTo = null; // Stores the message being replied to
@@ -323,6 +447,9 @@ function sendMessage() {
   socket.emit('chat message', messageData);
   userInput.value = '';
   
+  // Stop typing indicator
+  socket.emit('stop typing', { room: currentRoom });
+  
   // Clear reply state after sending
   cancelReply();
 }
@@ -391,10 +518,125 @@ socket.on('message history', function(history) {
 socket.on('chat message', function(msg) {
   // Only display messages from the current room
   if (msg.room === currentRoom) {
+    const isOwnMessage = msg.username === getCurrentUsername();
+    
     displayMessage(msg);
+    
+    // Play sound and show notification for messages from others
+    if (!isOwnMessage) {
+      // Play notification sound
+      if (typeof playNotificationSound === 'function') {
+        playNotificationSound();
+      }
+      
+      // Show desktop notification if page is not focused
+      if (!document.hasFocus() && 'Notification' in window && Notification.permission === 'granted') {
+        const notification = new Notification(`${msg.username} in ${msg.room}`, {
+          body: msg.userMsg,
+          icon: '/favicon.ico',
+          tag: 'hokeychat-message'
+        });
+        
+        // Close notification after 5 seconds
+        setTimeout(() => notification.close(), 5000);
+        
+        // Focus chat when clicking notification
+        notification.onclick = () => {
+          window.focus();
+          notification.close();
+        };
+      }
+    }
+    
     // Auto-scroll to bottom
     const msgDiv = document.getElementById('messages');
     msgDiv.scrollTop = msgDiv.scrollHeight;
+  }
+});
+
+// Typing indicator management
+let typingUsers = new Set();
+let typingTimeouts = {}; // Track timeouts for each user
+
+socket.on('user typing', function(data) {
+  if (data.room === currentRoom && data.username !== getCurrentUsername()) {
+    typingUsers.add(data.username);
+    updateTypingIndicator();
+    
+    // Clear existing timeout for this user
+    if (typingTimeouts[data.username]) {
+      clearTimeout(typingTimeouts[data.username]);
+    }
+    
+    // Set new timeout to remove user after 3 seconds
+    typingTimeouts[data.username] = setTimeout(() => {
+      typingUsers.delete(data.username);
+      delete typingTimeouts[data.username];
+      updateTypingIndicator();
+    }, 3000);
+  }
+});
+
+socket.on('user stop typing', function(data) {
+  if (data.room === currentRoom) {
+    typingUsers.delete(data.username);
+    if (typingTimeouts[data.username]) {
+      clearTimeout(typingTimeouts[data.username]);
+      delete typingTimeouts[data.username];
+    }
+    updateTypingIndicator();
+  }
+});
+
+function updateTypingIndicator() {
+  const indicator = document.getElementById('typingIndicator');
+  if (typingUsers.size === 0) {
+    indicator.style.display = 'none';
+  } else {
+    indicator.style.display = 'block';
+    const users = Array.from(typingUsers);
+    if (users.length === 1) {
+      indicator.textContent = `${users[0]} is typing...`;
+    } else if (users.length === 2) {
+      indicator.textContent = `${users[0]} and ${users[1]} are typing...`;
+    } else {
+      indicator.textContent = `${users.length} people are typing...`;
+    }
+  }
+}
+
+// Listen for reaction updates
+socket.on('reaction update', function(data) {
+  if (data.room === currentRoom) {
+    // Find the message and update reactions
+    const messageElem = document.querySelector(`[data-message-id="${data.messageId}"]`);
+    if (messageElem) {
+      // Find or create reactions container
+      let reactionsDiv = messageElem.querySelector('.message-reactions');
+      if (!reactionsDiv) {
+        reactionsDiv = document.createElement('div');
+        reactionsDiv.className = 'message-reactions';
+        messageElem.appendChild(reactionsDiv);
+      }
+      
+      // Update reactions display
+      reactionsDiv.innerHTML = '';
+      if (data.reactions && Object.keys(data.reactions).length > 0) {
+        for (const [emoji, users] of Object.entries(data.reactions)) {
+          const userReacted = users.includes(getCurrentUsername());
+          const reactionClass = userReacted ? 'reaction user-reacted' : 'reaction';
+          const reactionSpan = document.createElement('span');
+          reactionSpan.className = reactionClass;
+          reactionSpan.title = users.join(', ');
+          reactionSpan.onclick = () => toggleReaction(data.messageId, emoji);
+          reactionSpan.innerHTML = `
+            <span class="reaction-emoji">${emoji}</span>
+            <span class="reaction-count">${users.length}</span>
+          `;
+          reactionsDiv.appendChild(reactionSpan);
+        }
+      }
+    }
   }
 });
 
@@ -409,13 +651,13 @@ function displayMessage(data) {
     msgElem.classList.add('message-reply');
   }
   
-  const time = data.timestamp ? new Date(data.timestamp).toLocaleTimeString() : '';
+  const time = formatRelativeTime(data.timestamp);
   
   let messageHTML = '';
   
   // Show reply context if this is a reply
   if (data.replyTo) {
-    const replyTime = data.replyTo.timestamp ? new Date(data.replyTo.timestamp).toLocaleTimeString() : '';
+    const replyTime = formatRelativeTime(data.replyTo.timestamp);
     messageHTML += `
       <div class="reply-context">
         <div class="reply-bar"></div>
@@ -429,13 +671,17 @@ function displayMessage(data) {
   }
   
   // Message content
+  const linkedMessage = linkifyText(escapeHtml(data.userMsg));
+  const messageId = data._id || data.timestamp;
+  
   messageHTML += `
     <div class="message-content">
       <span class="message-time">[${time}]</span>
       <span class="message-username">${escapeHtml(data.username)}:</span>
-      <span class="message-text">${escapeHtml(data.userMsg)}</span>
+      <span class="message-text">${linkedMessage}</span>
+      <button class="message-react-btn" onclick='showReactionPicker("${messageId}", event)' title="Add reaction">😊</button>
       <button class="message-reply-btn" onclick='replyToMessage(${JSON.stringify({
-        messageId: data._id || data.timestamp,
+        messageId: messageId,
         username: data.username,
         userMsg: data.userMsg,
         timestamp: data.timestamp
@@ -443,7 +689,24 @@ function displayMessage(data) {
     </div>
   `;
   
+  // Display reactions if any
+  if (data.reactions && Object.keys(data.reactions).length > 0) {
+    messageHTML += '<div class="message-reactions">';
+    for (const [emoji, users] of Object.entries(data.reactions)) {
+      const userReacted = users.includes(getCurrentUsername());
+      const reactionClass = userReacted ? 'reaction user-reacted' : 'reaction';
+      messageHTML += `
+        <span class="${reactionClass}" onclick='toggleReaction("${messageId}", "${emoji}")' title="${users.join(', ')}">
+          <span class="reaction-emoji">${emoji}</span>
+          <span class="reaction-count">${users.length}</span>
+        </span>
+      `;
+    }
+    messageHTML += '</div>';
+  }
+  
   msgElem.innerHTML = messageHTML;
+  msgElem.dataset.messageId = messageId;
   messagesDiv.appendChild(msgElem);
 }
 

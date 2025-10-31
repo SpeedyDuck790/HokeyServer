@@ -56,6 +56,16 @@
   flex: 1;
 }
 
+.message-link {
+  color: var(--button-bg);
+  text-decoration: underline;
+  word-break: break-all;
+}
+
+.message-link:hover {
+  opacity: 0.8;
+}
+
 /* Reply button on messages */
 .message-reply-btn {
   opacity: 0;
@@ -167,4 +177,108 @@
 .reply-preview-cancel:hover {
   background: #d32f2f;
   color: white;
+}
+
+/* Typing indicator */
+.typing-indicator {
+  padding: 8px 12px;
+  margin-bottom: 8px;
+  font-size: 0.9em;
+  font-style: italic;
+  color: #666;
+  min-height: 20px;
+}
+
+/* Message reactions */
+.message-reactions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 4px;
+  margin-top: 4px;
+}
+
+.reaction {
+  display: inline-flex;
+  align-items: center;
+  gap: 3px;
+  padding: 2px 6px;
+  background: rgba(0, 123, 255, 0.1);
+  border: 1px solid rgba(0, 123, 255, 0.3);
+  border-radius: 12px;
+  font-size: 0.9em;
+  cursor: pointer;
+  transition: all 0.2s;
+}
+
+.reaction:hover {
+  background: rgba(0, 123, 255, 0.2);
+  transform: scale(1.05);
+}
+
+.reaction.user-reacted {
+  background: rgba(0, 123, 255, 0.3);
+  border-color: var(--button-bg);
+  border-width: 2px;
+}
+
+.reaction-emoji {
+  font-size: 1.1em;
+}
+
+.reaction-count {
+  font-size: 0.85em;
+  font-weight: bold;
+  color: var(--text-color);
+}
+
+.reaction-picker {
+  display: none;
+  position: absolute;
+  background: var(--messages-bg);
+  border: 1px solid #ccc;
+  border-radius: 8px;
+  padding: 6px;
+  box-shadow: 0 2px 8px rgba(0,0,0,0.2);
+  z-index: 100;
+  gap: 4px;
+  flex-wrap: wrap;
+  max-width: 200px;
+}
+
+.reaction-picker.show {
+  display: flex;
+}
+
+.reaction-option {
+  font-size: 1.4em;
+  cursor: pointer;
+  padding: 4px;
+  border-radius: 4px;
+  transition: background 0.2s;
+}
+
+.reaction-option:hover {
+  background: rgba(0, 123, 255, 0.1);
+  transform: scale(1.2);
+}
+
+.message-react-btn {
+  opacity: 0;
+  padding: 2px 6px;
+  font-size: 0.9em;
+  background: transparent;
+  color: #666;
+  border: 1px solid #ccc;
+  border-radius: 3px;
+  cursor: pointer;
+  transition: opacity 0.2s;
+  margin-left: 4px;
+}
+
+.message:hover .message-react-btn {
+  opacity: 1;
+}
+
+.message-react-btn:hover {
+  background: rgba(0, 0, 0, 0.05);
 }

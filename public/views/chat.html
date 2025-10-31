@@ -80,6 +80,9 @@
     <!-- Container for displaying chat messages -->
     <div id="messages"></div>
     
+    <!-- Typing indicator -->
+    <div id="typingIndicator" class="typing-indicator" style="display: none;"></div>
+    
     <!-- Input area -->
     <div class="input-area">
       <input id="messageInput" type="text" placeholder="Type a message..." />
@@ -89,6 +92,7 @@
 
   <!-- Include Socket.io client library -->
   <script src="/socket.io/socket.io.js"></script>
+  <script src="/js/notification-sound.js"></script>
   <script src="/js/theme.js"></script>
   <script src="/js/chat.js"></script>
 </body>

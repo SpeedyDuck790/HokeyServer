@@ -53,6 +53,12 @@ const messageSchema = new mongoose.Schema({
     // Timestamp of when the message was last edited
     editedAt: {
         type: Date
+    },
+    // Reactions to the message
+    reactions: {
+        type: Map,
+        of: [String], // Array of usernames who reacted with each emoji
+        default: {}
     }
 }, {
     timestamps: true, // Adds createdAt and updatedAt automatically
@@ -60,6 +66,10 @@ const messageSchema = new mongoose.Schema({
         transform: function(doc, ret) {
             // Format the timestamp for the frontend
             ret.timestamp = ret.timestamp.toISOString();
+            // Convert reactions Map to plain object for JSON
+            if (ret.reactions instanceof Map) {
+                ret.reactions = Object.fromEntries(ret.reactions);
+            }
             return ret;
         }
     }
@@ -88,6 +98,32 @@ messageSchema.statics.getMessageCount = function(room = 'global') {
 messageSchema.methods.markAsEdited = function() {
     this.isEdited = true;
     this.editedAt = new Date();
+    return this.save();
+};
+
+// Instance method to toggle reaction
+messageSchema.methods.toggleReaction = function(emoji, username) {
+    if (!this.reactions) {
+        this.reactions = new Map();
+    }
+    
+    const users = this.reactions.get(emoji) || [];
+    const index = users.indexOf(username);
+    
+    if (index > -1) {
+        // Remove reaction
+        users.splice(index, 1);
+        if (users.length === 0) {
+            this.reactions.delete(emoji);
+        } else {
+            this.reactions.set(emoji, users);
+        }
+    } else {
+        // Add reaction
+        users.push(username);
+        this.reactions.set(emoji, users);
+    }
+    
     return this.save();
 };
 
