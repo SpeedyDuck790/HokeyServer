@@ -142,7 +142,280 @@ function formatRelativeTime(timestamp) {
 }
 
 // Socket.io connection
-const socket = io();
+let socket;
+let currentUser = null;
+
+// Initialize app
+document.addEventListener('DOMContentLoaded', async () => {
+  // Initialize authentication first
+  currentUser = await initAuth();
+  
+  // Display user profile in sidebar
+  if (currentUser) {
+    displayUserProfile(currentUser);
+  }
+  
+  // Connect socket with auth token
+  const token = getAuthToken();
+  socket = io({
+    auth: {
+      token: token
+    }
+  });
+  
+  // Make socket globally available
+  window.socket = socket;
+  
+  // Initialize socket listeners
+  initializeSocketListeners();
+  
+  // Load rooms and other initialization
+  loadRooms();
+  updateRoomTitle();
+});
+
+// Typing indicator management
+let typingUsers = new Set();
+let typingTimeouts = {}; // Track timeouts for each user
+
+function updateTypingIndicator() {
+  const indicator = document.getElementById('typingIndicator');
+  if (typingUsers.size === 0) {
+    indicator.style.display = 'none';
+  } else {
+    indicator.style.display = 'block';
+    const users = Array.from(typingUsers);
+    if (users.length === 1) {
+      indicator.textContent = `${users[0]} is typing...`;
+    } else if (users.length === 2) {
+      indicator.textContent = `${users[0]} and ${users[1]} are typing...`;
+    } else {
+      indicator.textContent = `${users.length} people are typing...`;
+    }
+  }
+}
+
+/**
+ * Initialize all socket.io listeners
+ */
+function initializeSocketListeners() {
+  // Auto-join global room on connection
+  socket.on('connect', function() {
+    console.log('Connected to server');
+    const username = getCurrentUsername();
+    switchRoom('global', false);
+  });
+
+  // Listen for user list updates from the server
+  socket.on('user list', function(data) {
+    // Check if this update is for the current room
+    if (data.room === currentRoom) {
+      document.getElementById('onlineCount').textContent = data.users.length;
+      const dropdown = document.getElementById('userDropdown');
+      dropdown.innerHTML = '';
+      data.users.forEach(function(user) {
+        const userElem = document.createElement('div');
+        userElem.textContent = user;
+        userElem.style.padding = '4px 8px';
+        dropdown.appendChild(userElem);
+      });
+    }
+  });
+
+  // Listen for room errors (like wrong password)
+  socket.on('room error', function(data) {
+    const message = data.message || 'Room error';
+    
+    // If it's a password error, prompt for password and retry
+    if (message.includes('Password required') || message.includes('Incorrect password')) {
+      const password = prompt(`${message}\n\nEnter password for room "${currentRoom}":`);
+      if (password && password.trim()) {
+        // Retry joining with password
+        socket.emit('join room', { 
+          room: currentRoom, 
+          username: getCurrentUsername(),
+          password: password.trim()
+        });
+        return;
+      }
+    }
+    
+    // If user cancelled or other error, show alert and go back to global
+    alert(message);
+    switchRoom('global', false);
+  });
+
+  // Listen for message history from the server
+  socket.on('message history', function(history) {
+    const messagesDiv = document.getElementById('messages');
+    messagesDiv.innerHTML = '';
+    history.forEach(function(data) {
+      displayMessage(data);
+      // Track oldest timestamp for infinite scroll
+      if (data.timestamp && (!oldestMessageTimestamp || data.timestamp < oldestMessageTimestamp)) {
+        oldestMessageTimestamp = data.timestamp;
+      }
+    });
+    // Scroll to bottom
+    messagesDiv.scrollTop = messagesDiv.scrollHeight;
+  });
+
+  // Listen for older messages (infinite scroll)
+  socket.on('older messages', function(data) {
+    const messagesDiv = document.getElementById('messages');
+    const scrollHeight = messagesDiv.scrollHeight;
+    
+    // Remove loading indicator
+    const loader = messagesDiv.querySelector('.loading-indicator');
+    if (loader) loader.remove();
+    
+    if (data.messages && data.messages.length > 0) {
+      // Prepend older messages
+      data.messages.reverse().forEach(function(msg) {
+        const firstMessage = messagesDiv.firstChild;
+        const msgElem = createMessageElement(msg);
+        messagesDiv.insertBefore(msgElem, firstMessage);
+        
+        // Update oldest timestamp
+        if (msg.timestamp && (!oldestMessageTimestamp || msg.timestamp < oldestMessageTimestamp)) {
+          oldestMessageTimestamp = msg.timestamp;
+        }
+      });
+      
+      // Maintain scroll position
+      const newScrollHeight = messagesDiv.scrollHeight;
+      messagesDiv.scrollTop = newScrollHeight - scrollHeight;
+    } else {
+      hasMoreMessages = false;
+    }
+    
+    isLoadingOlderMessages = false;
+  });
+
+  // Listen for messages from the server
+  socket.on('chat message', function(msg) {
+    // Track last message for this room
+    lastMessages[msg.room] = {
+      username: msg.username,
+      message: msg.userMsg,
+      timestamp: msg.timestamp
+    };
+    localStorage.setItem('lastMessages', JSON.stringify(lastMessages));
+    
+    // Only display messages from the current room
+    if (msg.room === currentRoom) {
+      const isOwnMessage = msg.username === getCurrentUsername();
+      
+      displayMessage(msg);
+      
+      // Play sound and show notification for messages from others
+      if (!isOwnMessage) {
+        // Play notification sound
+        if (typeof playNotificationSound === 'function') {
+          playNotificationSound();
+        }
+        
+        // Show desktop notification if page is not focused
+        if (!document.hasFocus() && 'Notification' in window && Notification.permission === 'granted') {
+          const notification = new Notification(`${msg.username} in ${msg.room}`, {
+            body: msg.userMsg,
+            icon: '/favicon.ico',
+            tag: 'hokeychat-message'
+          });
+          
+          // Close notification after 5 seconds
+          setTimeout(() => notification.close(), 5000);
+          
+          // Focus chat when clicking notification
+          notification.onclick = () => {
+            window.focus();
+            notification.close();
+          };
+        }
+      }
+      
+      // Auto-scroll to bottom
+      const msgDiv = document.getElementById('messages');
+      msgDiv.scrollTop = msgDiv.scrollHeight;
+    } else {
+      // Increment unread count for other rooms
+      unreadCounts[msg.room] = (unreadCounts[msg.room] || 0) + 1;
+      localStorage.setItem('unreadCounts', JSON.stringify(unreadCounts));
+    }
+  });
+
+  // Listen for user typing events
+  socket.on('user typing', function(data) {
+    if (data.room === currentRoom && data.username !== getCurrentUsername()) {
+      typingUsers.add(data.username);
+      updateTypingIndicator();
+      
+      // Clear existing timeout for this user
+      if (typingTimeouts[data.username]) {
+        clearTimeout(typingTimeouts[data.username]);
+      }
+      
+      // Set new timeout to remove user after 3 seconds
+      typingTimeouts[data.username] = setTimeout(() => {
+        typingUsers.delete(data.username);
+        delete typingTimeouts[data.username];
+        updateTypingIndicator();
+      }, 3000);
+    }
+  });
+
+  // Listen for user stop typing events
+  socket.on('user stop typing', function(data) {
+    if (data.room === currentRoom) {
+      typingUsers.delete(data.username);
+      if (typingTimeouts[data.username]) {
+        clearTimeout(typingTimeouts[data.username]);
+        delete typingTimeouts[data.username];
+      }
+      updateTypingIndicator();
+    }
+  });
+
+  // Listen for reaction updates
+  socket.on('reaction update', function(data) {
+    if (data.room === currentRoom) {
+      // Find the message and update reactions
+      const messageElem = document.querySelector(`[data-message-id="${data.messageId}"]`);
+      if (messageElem) {
+        // Find or create reactions container
+        let reactionsDiv = messageElem.querySelector('.message-reactions');
+        if (!reactionsDiv) {
+          reactionsDiv = document.createElement('div');
+          reactionsDiv.className = 'message-reactions';
+          messageElem.appendChild(reactionsDiv);
+        }
+        
+        // Update reactions display
+        reactionsDiv.innerHTML = '';
+        if (data.reactions && Object.keys(data.reactions).length > 0) {
+          for (const [emoji, users] of Object.entries(data.reactions)) {
+            const userReacted = users.includes(getCurrentUsername());
+            const reactionClass = userReacted ? 'reaction user-reacted' : 'reaction';
+            const reactionSpan = document.createElement('span');
+            reactionSpan.className = reactionClass;
+            reactionSpan.title = users.join(', ');
+            reactionSpan.onclick = () => toggleReaction(data.messageId, emoji);
+            reactionSpan.innerHTML = `
+              <span class="reaction-emoji">${emoji}</span>
+              <span class="reaction-count">${users.length}</span>
+            `;
+            reactionsDiv.appendChild(reactionSpan);
+          }
+        }
+      }
+    }
+  });
+
+  // Handle disconnection
+  socket.on('disconnect', function() {
+    console.log('Disconnected from server');
+  });
+}
 
 /**
  * Update the room title display based on current room
@@ -524,232 +797,6 @@ function toggleUserDropdown() {
   dropdown.style.display = dropdown.style.display === 'none' ? 'block' : 'none';
 }
 
-// --- Socket.io Event Listeners ---
-
-// Listen for user list updates from the server
-socket.on('user list', function(data) {
-  // Check if this update is for the current room
-  if (data.room === currentRoom) {
-    document.getElementById('onlineCount').textContent = data.users.length;
-    const dropdown = document.getElementById('userDropdown');
-    dropdown.innerHTML = '';
-    data.users.forEach(function(user) {
-      const userElem = document.createElement('div');
-      userElem.textContent = user;
-      userElem.style.padding = '4px 8px';
-      dropdown.appendChild(userElem);
-    });
-  }
-});
-
-// Listen for room errors (like wrong password)
-socket.on('room error', function(data) {
-  const message = data.message || 'Room error';
-  
-  // If it's a password error, prompt for password and retry
-  if (message.includes('Password required') || message.includes('Incorrect password')) {
-    const password = prompt(`${message}\n\nEnter password for room "${currentRoom}":`);
-    if (password && password.trim()) {
-      // Retry joining with password
-      socket.emit('join room', { 
-        room: currentRoom, 
-        username: getCurrentUsername(),
-        password: password.trim()
-      });
-      return;
-    }
-  }
-  
-  // If user cancelled or other error, show alert and go back to global
-  alert(message);
-  switchRoom('global', false);
-});
-
-// Listen for message history from the server
-socket.on('message history', function(history) {
-  const messagesDiv = document.getElementById('messages');
-  messagesDiv.innerHTML = '';
-  history.forEach(function(data) {
-    displayMessage(data);
-    // Track oldest timestamp for infinite scroll
-    if (data.timestamp && (!oldestMessageTimestamp || data.timestamp < oldestMessageTimestamp)) {
-      oldestMessageTimestamp = data.timestamp;
-    }
-  });
-  // Scroll to bottom
-  messagesDiv.scrollTop = messagesDiv.scrollHeight;
-});
-
-// Listen for older messages (infinite scroll)
-socket.on('older messages', function(data) {
-  const messagesDiv = document.getElementById('messages');
-  const scrollHeight = messagesDiv.scrollHeight;
-  
-  // Remove loading indicator
-  const loader = messagesDiv.querySelector('.loading-indicator');
-  if (loader) loader.remove();
-  
-  if (data.messages && data.messages.length > 0) {
-    // Prepend older messages
-    data.messages.reverse().forEach(function(msg) {
-      const firstMessage = messagesDiv.firstChild;
-      const msgElem = createMessageElement(msg);
-      messagesDiv.insertBefore(msgElem, firstMessage);
-      
-      // Update oldest timestamp
-      if (msg.timestamp && (!oldestMessageTimestamp || msg.timestamp < oldestMessageTimestamp)) {
-        oldestMessageTimestamp = msg.timestamp;
-      }
-    });
-    
-    // Maintain scroll position
-    const newScrollHeight = messagesDiv.scrollHeight;
-    messagesDiv.scrollTop = newScrollHeight - scrollHeight;
-  } else {
-    hasMoreMessages = false;
-  }
-  
-  isLoadingOlderMessages = false;
-});
-
-// Listen for messages from the server
-socket.on('chat message', function(msg) {
-  // Track last message for this room
-  lastMessages[msg.room] = {
-    username: msg.username,
-    message: msg.userMsg,
-    timestamp: msg.timestamp
-  };
-  localStorage.setItem('lastMessages', JSON.stringify(lastMessages));
-  
-  // Only display messages from the current room
-  if (msg.room === currentRoom) {
-    const isOwnMessage = msg.username === getCurrentUsername();
-    
-    displayMessage(msg);
-    
-    // Play sound and show notification for messages from others
-    if (!isOwnMessage) {
-      // Play notification sound
-      if (typeof playNotificationSound === 'function') {
-        playNotificationSound();
-      }
-      
-      // Show desktop notification if page is not focused
-      if (!document.hasFocus() && 'Notification' in window && Notification.permission === 'granted') {
-        const notification = new Notification(`${msg.username} in ${msg.room}`, {
-          body: msg.userMsg,
-          icon: '/favicon.ico',
-          tag: 'hokeychat-message'
-        });
-        
-        // Close notification after 5 seconds
-        setTimeout(() => notification.close(), 5000);
-        
-        // Focus chat when clicking notification
-        notification.onclick = () => {
-          window.focus();
-          notification.close();
-        };
-      }
-    }
-    
-    // Auto-scroll to bottom
-    const msgDiv = document.getElementById('messages');
-    msgDiv.scrollTop = msgDiv.scrollHeight;
-  } else {
-    // Increment unread count for other rooms
-    unreadCounts[msg.room] = (unreadCounts[msg.room] || 0) + 1;
-    localStorage.setItem('unreadCounts', JSON.stringify(unreadCounts));
-  }
-});
-
-// Typing indicator management
-let typingUsers = new Set();
-let typingTimeouts = {}; // Track timeouts for each user
-
-socket.on('user typing', function(data) {
-  if (data.room === currentRoom && data.username !== getCurrentUsername()) {
-    typingUsers.add(data.username);
-    updateTypingIndicator();
-    
-    // Clear existing timeout for this user
-    if (typingTimeouts[data.username]) {
-      clearTimeout(typingTimeouts[data.username]);
-    }
-    
-    // Set new timeout to remove user after 3 seconds
-    typingTimeouts[data.username] = setTimeout(() => {
-      typingUsers.delete(data.username);
-      delete typingTimeouts[data.username];
-      updateTypingIndicator();
-    }, 3000);
-  }
-});
-
-socket.on('user stop typing', function(data) {
-  if (data.room === currentRoom) {
-    typingUsers.delete(data.username);
-    if (typingTimeouts[data.username]) {
-      clearTimeout(typingTimeouts[data.username]);
-      delete typingTimeouts[data.username];
-    }
-    updateTypingIndicator();
-  }
-});
-
-function updateTypingIndicator() {
-  const indicator = document.getElementById('typingIndicator');
-  if (typingUsers.size === 0) {
-    indicator.style.display = 'none';
-  } else {
-    indicator.style.display = 'block';
-    const users = Array.from(typingUsers);
-    if (users.length === 1) {
-      indicator.textContent = `${users[0]} is typing...`;
-    } else if (users.length === 2) {
-      indicator.textContent = `${users[0]} and ${users[1]} are typing...`;
-    } else {
-      indicator.textContent = `${users.length} people are typing...`;
-    }
-  }
-}
-
-// Listen for reaction updates
-socket.on('reaction update', function(data) {
-  if (data.room === currentRoom) {
-    // Find the message and update reactions
-    const messageElem = document.querySelector(`[data-message-id="${data.messageId}"]`);
-    if (messageElem) {
-      // Find or create reactions container
-      let reactionsDiv = messageElem.querySelector('.message-reactions');
-      if (!reactionsDiv) {
-        reactionsDiv = document.createElement('div');
-        reactionsDiv.className = 'message-reactions';
-        messageElem.appendChild(reactionsDiv);
-      }
-      
-      // Update reactions display
-      reactionsDiv.innerHTML = '';
-      if (data.reactions && Object.keys(data.reactions).length > 0) {
-        for (const [emoji, users] of Object.entries(data.reactions)) {
-          const userReacted = users.includes(getCurrentUsername());
-          const reactionClass = userReacted ? 'reaction user-reacted' : 'reaction';
-          const reactionSpan = document.createElement('span');
-          reactionSpan.className = reactionClass;
-          reactionSpan.title = users.join(', ');
-          reactionSpan.onclick = () => toggleReaction(data.messageId, emoji);
-          reactionSpan.innerHTML = `
-            <span class="reaction-emoji">${emoji}</span>
-            <span class="reaction-count">${users.length}</span>
-          `;
-          reactionsDiv.appendChild(reactionSpan);
-        }
-      }
-    }
-  }
-});
-
 /**
  * Create a message element (helper for displayMessage and infinite scroll)
  */
@@ -828,42 +875,3 @@ function displayMessage(data) {
   messagesDiv.appendChild(msgElem);
 }
 
-
-// On connect, join the room (prompt for password if needed)
-socket.on('connect', async function() {
-  // Set room title on connect
-  updateRoomTitle();
-  
-  if (currentRoom !== 'global') {
-    try {
-      const res = await fetch(`/api/rooms/${encodeURIComponent(currentRoom)}`);
-      const data = await res.json();
-      if (!res.ok || !data.success) {
-        alert('Room not found or error fetching room info. Redirecting to global.');
-        switchRoom('global', false);
-        return;
-      }
-
-      if (data.room && data.room.hasPassword) {
-        const pw = prompt(`Enter password for room "${currentRoom}":`);
-        if (!pw) {
-          // user cancelled
-          switchRoom('global', false);
-          return;
-        }
-        socket.emit('join room', { room: currentRoom, username: getCurrentUsername(), password: pw });
-        return;
-      }
-    } catch (err) {
-      console.error('Error fetching room info on connect:', err);
-      // fallthrough to join without password
-    }
-  }
-
-  socket.emit('join room', { room: currentRoom, username: getCurrentUsername() });
-});
-
-// Handle disconnection
-socket.on('disconnect', function() {
-  console.log('Disconnected from server');
-});

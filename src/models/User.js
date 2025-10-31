@@ -158,9 +158,7 @@ const userSchema = new mongoose.Schema({
   }
 });
 
-// Indexes for faster queries
-userSchema.index({ email: 1 });
-userSchema.index({ username: 1 });
+// Indexes for faster queries (email and username already indexed via unique: true)
 userSchema.index({ isGuest: 1 });
 userSchema.index({ 'profile.status': 1 });
 userSchema.index({ lastSeen: -1 });

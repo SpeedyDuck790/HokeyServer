@@ -125,13 +125,23 @@
         <button class="sidebar-toggle" onclick="toggleRightSidebar()" title="Toggle sidebar">▶</button>
       </h3>
       
-      <!-- Username section -->
-      <div class="username-section">
-        <label for="usernameInput" style="font-size: 0.95em; margin-bottom: 5px; display: block;">Username:</label>
-        <input id="usernameInput" type="text" maxlength="50" placeholder="Anon" style="width: 100%; padding: 8px; border-radius: 6px; border: 1px solid var(--border-color); background: var(--input-bg); color: var(--text-color);" />
+      <!-- User Profile Section -->
+      <div id="userProfileSection">
+        <!-- Profile will be loaded here by JavaScript -->
+        <div style="text-align: center; padding: 20px; opacity: 0.6;">
+          Loading profile...
+        </div>
       </div>
       
-      <!-- Future features will go here -->
+      <!-- Login/Register buttons for guests -->
+      <div id="guestActions" style="margin-top: 20px; display: none;">
+        <button onclick="showLoginModal()" style="width: 100%; margin-bottom: 10px; background: #2196F3;">
+          🔑 Login
+        </button>
+        <button onclick="showRegisterModal()" style="width: 100%; background: #4CAF50;">
+          📝 Register
+        </button>
+      </div>
     </aside>
     
   </div> <!-- end app-wrapper -->
@@ -142,6 +152,8 @@
   <script src="/js/fontsize.js"></script>
   <script src="/js/sidebar.js"></script>
   <script src="/js/theme.js"></script>
+  <script src="/js/auth.js"></script>
+  <script src="/js/profile.js"></script>
   <script src="/js/chat.js"></script>
 </body>
 </html>
