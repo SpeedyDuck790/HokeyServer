@@ -300,6 +300,135 @@ class ModerationController {
       });
     }
   }
+
+  /**
+   * Assign moderator (Chat Admin only)
+   */
+  async assignModerator(req, res) {
+    try {
+      const { username, roomName } = req.body;
+      
+      if (!username || !roomName) {
+        return res.status(400).json({
+          success: false,
+          error: 'Username and roomName are required'
+        });
+      }
+      
+      // Check chat admin permission
+      await this.checkChatAdminPermission(req.userId, roomName);
+      
+      const targetUser = await User.findOne({ username });
+      if (!targetUser) {
+        return res.status(404).json({
+          success: false,
+          error: 'User not found'
+        });
+      }
+      
+      const room = await Room.findOne({ name: roomName });
+      if (!room) {
+        return res.status(404).json({
+          success: false,
+          error: 'Room not found'
+        });
+      }
+      
+      // Check if user already has a role in this room
+      const existingRole = targetUser.roomRoles.find(r => r.roomName === roomName);
+      if (existingRole) {
+        if (existingRole.role === 'moderator') {
+          return res.status(400).json({
+            success: false,
+            error: 'User is already a moderator of this room'
+          });
+        }
+        if (existingRole.role === 'admin') {
+          return res.status(400).json({
+            success: false,
+            error: 'User is already an admin of this room'
+          });
+        }
+      } else {
+        // Add moderator role
+        targetUser.roomRoles.push({
+          roomId: room._id,
+          roomName: roomName,
+          role: 'moderator',
+          grantedBy: req.userId
+        });
+        
+        // Add chat-mod badge if not present
+        if (!targetUser.profile.badges.includes('chat-mod')) {
+          targetUser.profile.badges.push('chat-mod');
+        }
+        
+        await targetUser.save();
+      }
+      
+      res.status(200).json({
+        success: true,
+        message: `${username} is now a moderator of "${roomName}"`,
+        data: { user: targetUser }
+      });
+    } catch (error) {
+      console.error('Assign moderator error:', error);
+      res.status(403).json({
+        success: false,
+        error: error.message
+      });
+    }
+  }
+
+  /**
+   * Remove moderator (Chat Admin only)
+   */
+  async removeModerator(req, res) {
+    try {
+      const { username, roomName } = req.body;
+      
+      if (!username || !roomName) {
+        return res.status(400).json({
+          success: false,
+          error: 'Username and roomName are required'
+        });
+      }
+      
+      // Check chat admin permission
+      await this.checkChatAdminPermission(req.userId, roomName);
+      
+      const targetUser = await User.findOne({ username });
+      if (!targetUser) {
+        return res.status(404).json({
+          success: false,
+          error: 'User not found'
+        });
+      }
+      
+      // Remove room role
+      targetUser.roomRoles = targetUser.roomRoles.filter(r => r.roomName !== roomName);
+      
+      // Remove chat-mod badge if user has no more moderator roles
+      const hasOtherModRoles = targetUser.roomRoles.some(r => r.role === 'moderator');
+      if (!hasOtherModRoles) {
+        targetUser.profile.badges = targetUser.profile.badges.filter(b => b !== 'chat-mod');
+      }
+      
+      await targetUser.save();
+      
+      res.status(200).json({
+        success: true,
+        message: `Removed ${username}'s moderator role in "${roomName}"`,
+        data: { user: targetUser }
+      });
+    } catch (error) {
+      console.error('Remove moderator error:', error);
+      res.status(403).json({
+        success: false,
+        error: error.message
+      });
+    }
+  }
 }
 
 module.exports = new ModerationController();

@@ -48,7 +48,7 @@ function showAdminPanel() {
   modal.innerHTML = `
     <div style="position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.8); display: flex; align-items: center; justify-content: center; z-index: 10000; overflow-y: auto; padding: 20px;">
       <div style="background: var(--bg-color); padding: 30px; border-radius: 12px; max-width: 800px; width: 90%; max-height: 90vh; overflow-y: auto;">
-        <h2 style="margin: 0 0 20px 0;">👑 Admin Panel</h2>
+        <h2 style="margin: 0 0 20px 0;">👑 Site Admin Panel</h2>
         
         <div style="display: flex; gap: 10px; margin-bottom: 20px;">
           <button onclick="showAdminTab('badges')" id="adminTabBadges" style="flex: 1; padding: 10px; border-radius: 6px; background: #4CAF50; color: white; border: none; cursor: pointer;">
@@ -75,6 +75,103 @@ function showAdminPanel() {
   
   document.body.appendChild(modal);
   showAdminTab('badges');
+}
+
+/**
+ * Show chat admin panel (for room-specific admins)
+ */
+function showChatAdminPanel() {
+  const currentUser = JSON.parse(localStorage.getItem('hokeyCurrentUser') || '{}');
+  const roomRoles = currentUser.roomRoles || [];
+  
+  // Filter to only rooms where user is admin or moderator
+  const managedRooms = roomRoles.filter(r => r.role === 'admin' || r.role === 'moderator');
+  
+  if (managedRooms.length === 0) {
+    alert('You don\'t have admin or moderator privileges for any rooms');
+    return;
+  }
+
+  const modal = document.createElement('div');
+  modal.innerHTML = `
+    <div style="position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.8); display: flex; align-items: center; justify-content: center; z-index: 10000; overflow-y: auto; padding: 20px;">
+      <div style="background: var(--bg-color); padding: 30px; border-radius: 12px; max-width: 700px; width: 90%; max-height: 90vh; overflow-y: auto;">
+        <h2 style="margin: 0 0 20px 0;">🔧 Chat Admin Panel</h2>
+        
+        <div style="margin-bottom: 20px;">
+          <label style="display: block; margin-bottom: 10px;">Select Room:</label>
+          <select id="chatAdminRoomSelect" onchange="loadChatAdminRoom(this.value)" style="width: 100%; padding: 10px; border-radius: 6px; background: var(--input-bg); color: var(--text-color); border: 1px solid var(--border-color);">
+            <option value="">-- Select a room --</option>
+            ${managedRooms.map(r => `<option value="${escapeHtml(r.roomName)}">${escapeHtml(r.roomName)} (${r.role})</option>`).join('')}
+          </select>
+        </div>
+        
+        <div id="chatAdminContent" style="min-height: 200px;">
+          <p style="text-align: center; opacity: 0.5;">Select a room to manage</p>
+        </div>
+        
+        <div style="margin-top: 20px; text-align: right;">
+          <button onclick="this.closest('div[style*=fixed]').remove()" style="padding: 10px 20px; border-radius: 6px; background: #666; color: white; border: none; cursor: pointer;">
+            Close
+          </button>
+        </div>
+      </div>
+    </div>
+  `;
+  
+  document.body.appendChild(modal);
+}
+
+/**
+ * Load chat admin panel for specific room
+ */
+function loadChatAdminRoom(roomName) {
+  if (!roomName) {
+    document.getElementById('chatAdminContent').innerHTML = '<p style="text-align: center; opacity: 0.5;">Select a room to manage</p>';
+    return;
+  }
+  
+  const currentUser = JSON.parse(localStorage.getItem('hokeyCurrentUser') || '{}');
+  const roomRole = (currentUser.roomRoles || []).find(r => r.roomName === roomName);
+  
+  if (!roomRole) {
+    document.getElementById('chatAdminContent').innerHTML = '<p style="text-align: center; color: #f44336;">Access denied</p>';
+    return;
+  }
+  
+  const isRoomAdmin = roomRole.role === 'admin';
+  
+  document.getElementById('chatAdminContent').innerHTML = `
+    <h3>Managing: ${escapeHtml(roomName)}</h3>
+    <p style="opacity: 0.7; margin-bottom: 20px;">Your role: ${roomRole.role}</p>
+    
+    ${isRoomAdmin ? `
+      <div style="padding: 15px; border-radius: 8px; background: var(--input-bg); margin-bottom: 15px;">
+        <h4 style="margin: 0 0 10px 0;">Assign Moderator</h4>
+        <input type="text" id="modUsername" placeholder="Enter username..." style="width: 100%; padding: 10px; border-radius: 6px; background: var(--bg-color); color: var(--text-color); border: 1px solid var(--border-color); margin-bottom: 10px;">
+        <button onclick="assignRoomModerator('${escapeHtml(roomName)}')" style="width: 100%; padding: 10px; border-radius: 6px; background: #4CAF50; color: white; border: none; cursor: pointer;">
+          Assign as Moderator
+        </button>
+      </div>
+    ` : ''}
+    
+    <div style="padding: 15px; border-radius: 8px; background: var(--input-bg); margin-bottom: 15px;">
+      <h4 style="margin: 0 0 10px 0;">Ban User from Room</h4>
+      <input type="text" id="banUsername" placeholder="Enter username..." style="width: 100%; padding: 10px; border-radius: 6px; background: var(--bg-color); color: var(--text-color); border: 1px solid var(--border-color); margin-bottom: 10px;">
+      <input type="number" id="banDuration" placeholder="Duration in hours (leave empty for permanent)" style="width: 100%; padding: 10px; border-radius: 6px; background: var(--bg-color); color: var(--text-color); border: 1px solid var(--border-color); margin-bottom: 10px;">
+      <button onclick="banUserFromRoomPanel('${escapeHtml(roomName)}')" style="width: 100%; padding: 10px; border-radius: 6px; background: #f44336; color: white; border: none; cursor: pointer;">
+        Ban User
+      </button>
+    </div>
+    
+    <div style="padding: 15px; border-radius: 8px; background: var(--input-bg);">
+      <h4 style="margin: 0 0 10px 0;">Kick User from Room</h4>
+      <input type="text" id="kickUsername" placeholder="Enter username..." style="width: 100%; padding: 10px; border-radius: 6px; background: var(--bg-color); color: var(--text-color); border: 1px solid var(--border-color); margin-bottom: 10px;">
+      <button onclick="kickUserFromRoomPanel('${escapeHtml(roomName)}')" style="width: 100%; padding: 10px; border-radius: 6px; background: #ff9800; color: white; border: none; cursor: pointer;">
+        Kick User
+      </button>
+    </div>
+  `;
 }
 
 /**
@@ -481,6 +578,123 @@ async function banUserFromRoom(username, roomName) {
       alert(`${username} has been banned from "${roomName}"`);
     } else {
       alert(`Error: ${data.error || 'Failed to ban user'}`);
+    }
+  } catch (error) {
+    alert(`Error: ${error.message}`);
+  }
+}
+
+/**
+ * Ban user from room panel
+ */
+async function banUserFromRoomPanel(roomName) {
+  const username = document.getElementById('banUsername').value.trim();
+  const duration = document.getElementById('banDuration').value;
+  
+  if (!username) {
+    alert('Please enter a username');
+    return;
+  }
+  
+  if (!confirm(`Ban ${username} from "${roomName}"?`)) return;
+  
+  try {
+    const token = localStorage.getItem('hokeyAuthToken');
+    const response = await fetch('/api/moderation/ban-user', {
+      method: 'POST',
+      headers: {
+        'Authorization': `Bearer ${token}`,
+        'Content-Type': 'application/json'
+      },
+      body: JSON.stringify({ 
+        username, 
+        roomName, 
+        duration: duration ? parseInt(duration) : null 
+      })
+    });
+    
+    const data = await response.json();
+    
+    if (response.ok) {
+      alert(`${username} has been banned from "${roomName}"`);
+      document.getElementById('banUsername').value = '';
+      document.getElementById('banDuration').value = '';
+    } else {
+      alert(`Error: ${data.error || 'Failed to ban user'}`);
+    }
+  } catch (error) {
+    alert(`Error: ${error.message}`);
+  }
+}
+
+/**
+ * Kick user from room panel
+ */
+async function kickUserFromRoomPanel(roomName) {
+  const username = document.getElementById('kickUsername').value.trim();
+  
+  if (!username) {
+    alert('Please enter a username');
+    return;
+  }
+  
+  if (!confirm(`Kick ${username} from "${roomName}"?`)) return;
+  
+  try {
+    const token = localStorage.getItem('hokeyAuthToken');
+    const response = await fetch('/api/moderation/kick-user', {
+      method: 'POST',
+      headers: {
+        'Authorization': `Bearer ${token}`,
+        'Content-Type': 'application/json'
+      },
+      body: JSON.stringify({ username, roomName })
+    });
+    
+    const data = await response.json();
+    
+    if (response.ok) {
+      alert(`${username} has been kicked from "${roomName}"`);
+      document.getElementById('kickUsername').value = '';
+    } else {
+      alert(`Error: ${data.error || 'Failed to kick user'}`);
+    }
+  } catch (error) {
+    alert(`Error: ${error.message}`);
+  }
+}
+
+/**
+ * Assign room moderator (Chat Admin only)
+ */
+async function assignRoomModerator(roomName) {
+  const username = document.getElementById('modUsername').value.trim();
+  
+  if (!username) {
+    alert('Please enter a username');
+    return;
+  }
+  
+  if (!confirm(`Assign ${username} as moderator for "${roomName}"?`)) return;
+  
+  try {
+    const token = localStorage.getItem('hokeyAuthToken');
+    const response = await fetch('/api/moderation/assign-moderator', {
+      method: 'POST',
+      headers: {
+        'Authorization': `Bearer ${token}`,
+        'Content-Type': 'application/json'
+      },
+      body: JSON.stringify({ username, roomName })
+    });
+    
+    const data = await response.json();
+    
+    if (response.ok) {
+      alert(`${username} is now a moderator of "${roomName}"`);
+      document.getElementById('modUsername').value = '';
+    } else {
+      alert(`Error: ${data.error || 'Failed to assign moderator'}`);
     }
   } catch (error) {
     alert(`Error: ${error.message}`);

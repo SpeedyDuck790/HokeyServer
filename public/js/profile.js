@@ -163,7 +163,12 @@ function displayUserProfile(user) {
         </button>
         ${user.profile?.badges?.includes('site-admin') ? `
           <button onclick="showAdminPanel()" style="width: 100%; margin-bottom: 10px; background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); color: white; border: none; cursor: pointer; font-weight: bold;">
-            👑 Admin Panel
+            👑 Site Admin Panel
+          </button>
+        ` : ''}
+        ${user.roomRoles && user.roomRoles.length > 0 ? `
+          <button onclick="showChatAdminPanel()" style="width: 100%; margin-bottom: 10px; background: linear-gradient(135deg, #f093fb 0%, #f5576c 100%); color: white; border: none; cursor: pointer; font-weight: bold;">
+            🔧 Chat Admin Panel
           </button>
         ` : ''}
       `}
@@ -210,7 +215,24 @@ function displayUserProfile(user) {
             ${user.profile.badges.map(badge => {
               const theme = getBadgeTheme(badge);
               const bgColor = theme === 'gold' ? '#FFD700' : theme === 'purple' ? '#9C27B0' : theme === 'blue' ? '#2196F3' : theme === 'green' ? '#4CAF50' : theme === 'red' ? '#f44336' : '#666';
-              return `<span style="background: ${bgColor}; color: white; padding: 4px 10px; border-radius: 12px; font-size: 0.85em; display: inline-flex; align-items: center; gap: 4px;">
+              
+              // Build tooltip text
+              let tooltip = getBadgeName(badge);
+              if (badge === 'chat-admin' || badge === 'chat-mod') {
+                const rooms = (user.roomRoles || [])
+                  .filter(r => {
+                    if (badge === 'chat-admin') return r.role === 'admin';
+                    if (badge === 'chat-mod') return r.role === 'moderator';
+                    return false;
+                  })
+                  .map(r => r.roomName);
+                
+                if (rooms.length > 0) {
+                  tooltip += '\\nRooms: ' + rooms.join(', ');
+                }
+              }
+              
+              return `<span title="${tooltip}" style="background: ${bgColor}; color: white; padding: 4px 10px; border-radius: 12px; font-size: 0.85em; display: inline-flex; align-items: center; gap: 4px; cursor: help;">
                 <span>${getBadgeEmoji(badge)}</span>
                 <span>${getBadgeName(badge)}</span>
               </span>`;
@@ -734,8 +756,24 @@ async function showUserProfileModal(user) {
         ${!isGuest && user.profile?.badges && user.profile.badges.length > 0 ? `
           <div style="margin: 20px 0;">
             <strong>Badges:</strong>
-            <div style="display: flex; gap: 10px; flex-wrap: wrap; margin-top: 10px; font-size: 1.5em;">
-              ${user.profile.badges.map(badge => `<span title="${badge}">${getBadgeEmoji(badge)}</span>`).join('')}
+            <div style="display: flex; gap: 10px; flex-wrap: wrap; margin-top: 10px;">
+              ${user.profile.badges.map(badge => {
+                let tooltip = getBadgeName(badge);
+                if (badge === 'chat-admin' || badge === 'chat-mod') {
+                  const rooms = (user.roomRoles || [])
+                    .filter(r => {
+                      if (badge === 'chat-admin') return r.role === 'admin';
+                      if (badge === 'chat-mod') return r.role === 'moderator';
+                      return false;
+                    })
+                    .map(r => r.roomName);
+                  
+                  if (rooms.length > 0) {
+                    tooltip += '\\nRooms: ' + rooms.join(', ');
+                  }
+                }
+                return `<span title="${tooltip}" style="font-size: 1.5em; cursor: help;">${getBadgeEmoji(badge)}</span>`;
+              }).join('')}
             </div>
           </div>
         ` : ''}

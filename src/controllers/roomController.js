@@ -63,6 +63,7 @@ class RoomController {
                 name,
                 description,
                 createdBy,
+                createdByUserId: req.userId, // Pass the authenticated user's ID
                 isPublic,
                 maxUsers,
                 password,

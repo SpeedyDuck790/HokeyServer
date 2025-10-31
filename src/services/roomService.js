@@ -46,7 +46,8 @@ class RoomService {
             const { 
                 name, 
                 description = '', 
-                createdBy = 'Anonymous', 
+                createdBy = 'Anonymous',
+                createdByUserId = null,
                 isPublic = true, 
                 maxUsers = 100,
                 password,
@@ -95,6 +96,41 @@ class RoomService {
 
             const savedRoom = await newRoom.save();
             console.log(`🏠 Room created: ${trimmedName} by ${createdBy} ${hashedPassword ? '🔒' : ''}`);
+
+            // Assign creator as chat admin if userId is provided
+            if (createdByUserId) {
+                try {
+                    const User = require('../models/User');
+                    const creator = await User.findById(createdByUserId);
+                    
+                    if (creator) {
+                        // Check if user already has this room role
+                        const existingRole = creator.roomRoles.find(r => r.roomName === trimmedName);
+                        
+                        if (!existingRole) {
+                            // Add chat admin role for this room
+                            creator.roomRoles.push({
+                                roomId: savedRoom._id,
+                                roomName: trimmedName,
+                                role: 'admin',
+                                grantedAt: new Date(),
+                                grantedBy: createdByUserId
+                            });
+                            
+                            // Add chat-admin badge if not present
+                            if (!creator.profile.badges.includes('chat-admin')) {
+                                creator.profile.badges.push('chat-admin');
+                            }
+                            
+                            await creator.save();
+                            console.log(`👑 ${createdBy} assigned as chat admin for "${trimmedName}"`);
+                        }
+                    }
+                } catch (error) {
+                    console.error('Error assigning creator as admin:', error.message);
+                    // Don't throw - room was created successfully
+                }
+            }
 
             return savedRoom;
         } catch (error) {

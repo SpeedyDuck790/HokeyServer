@@ -258,6 +258,13 @@ class AdminController {
         });
       }
       
+      // Add appropriate badge if not present
+      if (role === 'admin' && !targetUser.profile.badges.includes('chat-admin')) {
+        targetUser.profile.badges.push('chat-admin');
+      } else if (role === 'moderator' && !targetUser.profile.badges.includes('chat-mod')) {
+        targetUser.profile.badges.push('chat-mod');
+      }
+      
       await targetUser.save();
       
       res.status(200).json({
@@ -299,6 +306,18 @@ class AdminController {
       }
       
       targetUser.roomRoles = targetUser.roomRoles.filter(r => r.roomName !== roomName);
+      
+      // Remove badges if user has no more roles of that type
+      const hasAdminRoles = targetUser.roomRoles.some(r => r.role === 'admin');
+      const hasModRoles = targetUser.roomRoles.some(r => r.role === 'moderator');
+      
+      if (!hasAdminRoles) {
+        targetUser.profile.badges = targetUser.profile.badges.filter(b => b !== 'chat-admin');
+      }
+      if (!hasModRoles) {
+        targetUser.profile.badges = targetUser.profile.badges.filter(b => b !== 'chat-mod');
+      }
+      
       await targetUser.save();
       
       res.status(200).json({
