@@ -195,7 +195,12 @@ function initializeSocketListeners() {
   socket.on('connect', function() {
     console.log('Connected to server');
     const username = getCurrentUsername();
-    switchRoom('global', false);
+    
+    // Emit join room directly without calling switchRoom (which toggles menu)
+    socket.emit('join room', { 
+      room: currentRoom, 
+      username: username
+    });
   });
 
   // Listen for user list updates from the server

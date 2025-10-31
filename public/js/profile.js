@@ -140,15 +140,9 @@ function displayUserProfile(user) {
     
     <div class="profile-info">
       <div class="profile-username" style="text-align: center; font-size: 1.2em; font-weight: bold; margin-bottom: 10px;">
-        ${user.displayName || user.username}
+        ${user.username}
         ${!isGuest ? '<span style="color: #4CAF50;">✓</span>' : '<span style="opacity: 0.6;">(Guest)</span>'}
       </div>
-      
-      ${!isGuest ? `
-        <div style="text-align: center; font-size: 0.9em; opacity: 0.8; margin-bottom: 15px;">
-          @${user.username}
-        </div>
-      ` : ''}
       
       ${isGuest ? `
         <button onclick="showUpgradeModal()" style="width: 100%; margin-bottom: 10px; background: #4CAF50;">
