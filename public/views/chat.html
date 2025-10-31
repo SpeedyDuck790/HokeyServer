@@ -30,24 +30,27 @@
     
     <div class="controls">
 
-      <!-- Settings menu and username input -->
+      <!-- Settings menu -->
       <div style="display: flex; align-items: center; gap: 10px;">
+        <!-- Left sidebar toggle button (appears when collapsed) -->
+        <button id="leftSidebarButton" onclick="toggleSidebar()" title="Show left sidebar" style="display: none;">◀ Rooms</button>
+        
         <button id="fontSizeToggle" onclick="cycleFontSize()" title="Change font size">A</button>
-        <button id="themeToggle" onclick="toggleTheme()" title="Toggle light/dark mode">🌙</button>
+        
         <select id="themeSelector" onchange="applyTheme(this.value)" title="Select theme" style="padding: 8px; border-radius: 6px; border: 1px solid #ccc; background: var(--bg-color); color: var(--text-color);">
-          <option value="dark">Dark</option>
-          <option value="light">Light</option>
-          <option value="blue">Ocean Blue</option>
-          <option value="purple">Purple Haze</option>
-          <option value="green">Forest Green</option>
-          <option value="sunset">Sunset Orange</option>
-          <option value="midnight">Midnight</option>
+          <option value="dark" data-bg="#1a1a1a">Dark</option>
+          <option value="light" data-bg="#ffffff">Light</option>
+          <option value="blue" data-bg="#1a2332">Ocean Blue</option>
+          <option value="purple" data-bg="#2d1b3d">Purple Haze</option>
+          <option value="green" data-bg="#1a2e1a">Forest Green</option>
+          <option value="sunset" data-bg="#2d1f1a">Sunset Orange</option>
+          <option value="midnight" data-bg="#0a0e1a">Midnight</option>
         </select>
+        
         <button id="roomMenuToggle" onclick="toggleRoomMenu()" title="Show/Hide Rooms">🏠 Rooms ▼</button>
-        <div class="username-box" style="position: static; background: none; box-shadow: none; padding: 0; border-radius: 0;">
-          <label for="usernameInput" style="font-size: 0.95em;">Username:</label>
-          <input id="usernameInput" type="text" maxlength="50" placeholder="Anon" style="width: 100px;" />
-        </div>
+        
+        <!-- Right sidebar toggle button (appears when collapsed) -->
+        <button id="rightSidebarButton" onclick="toggleRightSidebar()" title="Show right sidebar" style="display: none;">Profile ▶</button>
       </div>
 
       <!-- Online users box -->
@@ -114,6 +117,23 @@
     </div>
       </div> <!-- end chat-container -->
     </div> <!-- end main-content -->
+    
+    <!-- Right sidebar - placeholder for future features -->
+    <aside class="sidebar-right" id="rightSidebar">
+      <h3>
+        <span>Profile</span>
+        <button class="sidebar-toggle" onclick="toggleRightSidebar()" title="Toggle sidebar">▶</button>
+      </h3>
+      
+      <!-- Username section -->
+      <div class="username-section">
+        <label for="usernameInput" style="font-size: 0.95em; margin-bottom: 5px; display: block;">Username:</label>
+        <input id="usernameInput" type="text" maxlength="50" placeholder="Anon" style="width: 100%; padding: 8px; border-radius: 6px; border: 1px solid var(--border-color); background: var(--input-bg); color: var(--text-color);" />
+      </div>
+      
+      <!-- Future features will go here -->
+    </aside>
+    
   </div> <!-- end app-wrapper -->
 
   <!-- Include Socket.io client library -->

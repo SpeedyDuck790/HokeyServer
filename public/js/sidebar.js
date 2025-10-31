@@ -93,18 +93,43 @@ function switchToRoom(roomName) {
 function toggleSidebar() {
   const sidebar = document.getElementById('roomSidebar');
   const toggle = sidebar.querySelector('.sidebar-toggle');
+  const button = document.getElementById('leftSidebarButton');
   
   sidebar.classList.toggle('collapsed');
   
-  // Update toggle button arrow
+  // Update toggle button arrow and show/hide reappear button
   if (sidebar.classList.contains('collapsed')) {
     toggle.textContent = '▶';
     toggle.title = 'Expand sidebar';
+    button.style.display = 'inline-block';
     localStorage.setItem('sidebarCollapsed', 'true');
   } else {
     toggle.textContent = '◀';
     toggle.title = 'Collapse sidebar';
+    button.style.display = 'none';
     localStorage.setItem('sidebarCollapsed', 'false');
+  }
+}
+
+// Toggle right sidebar collapsed state
+function toggleRightSidebar() {
+  const sidebar = document.getElementById('rightSidebar');
+  const toggle = sidebar.querySelector('.sidebar-toggle');
+  const button = document.getElementById('rightSidebarButton');
+  
+  sidebar.classList.toggle('collapsed');
+  
+  // Update toggle button arrow and show/hide reappear button
+  if (sidebar.classList.contains('collapsed')) {
+    toggle.textContent = '◀';
+    toggle.title = 'Expand sidebar';
+    button.style.display = 'inline-block';
+    localStorage.setItem('rightSidebarCollapsed', 'true');
+  } else {
+    toggle.textContent = '▶';
+    toggle.title = 'Collapse sidebar';
+    button.style.display = 'none';
+    localStorage.setItem('rightSidebarCollapsed', 'false');
   }
 }
 
@@ -112,7 +137,10 @@ function toggleSidebar() {
 document.addEventListener('DOMContentLoaded', () => {
   updateSidebarDisplay();
   
-  // Restore collapsed state
+  const leftButton = document.getElementById('leftSidebarButton');
+  const rightButton = document.getElementById('rightSidebarButton');
+  
+  // Restore left sidebar collapsed state
   const isCollapsed = localStorage.getItem('sidebarCollapsed') === 'true';
   if (isCollapsed) {
     const sidebar = document.getElementById('roomSidebar');
@@ -120,6 +148,18 @@ document.addEventListener('DOMContentLoaded', () => {
     sidebar.classList.add('collapsed');
     toggle.textContent = '▶';
     toggle.title = 'Expand sidebar';
+    leftButton.style.display = 'inline-block';
+  }
+  
+  // Restore right sidebar collapsed state
+  const isRightCollapsed = localStorage.getItem('rightSidebarCollapsed') === 'true';
+  if (isRightCollapsed) {
+    const rightSidebar = document.getElementById('rightSidebar');
+    const rightToggle = rightSidebar.querySelector('.sidebar-toggle');
+    rightSidebar.classList.add('collapsed');
+    rightToggle.textContent = '◀';
+    rightToggle.title = 'Expand sidebar';
+    rightButton.style.display = 'inline-block';
   }
   
   // Update timestamps every minute

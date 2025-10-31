@@ -82,3 +82,53 @@ button:hover {
   min-width: 150px;
   box-shadow: 0 2px 8px rgba(0,0,0,0.1);
 }
+
+/* Theme selector with colored options */
+#themeSelector {
+  cursor: pointer;
+  font-weight: 500;
+}
+
+#themeSelector option[value="dark"] {
+  background-color: #1a1a1a;
+  color: #ffffff;
+}
+
+#themeSelector option[value="light"] {
+  background-color: #ffffff;
+  color: #1a1a1a;
+}
+
+#themeSelector option[value="blue"] {
+  background-color: #1a2332;
+  color: #64b5f6;
+}
+
+#themeSelector option[value="purple"] {
+  background-color: #2d1b3d;
+  color: #ce93d8;
+}
+
+#themeSelector option[value="green"] {
+  background-color: #1a2e1a;
+  color: #81c784;
+}
+
+#themeSelector option[value="sunset"] {
+  background-color: #2d1f1a;
+  color: #ff9800;
+}
+
+#themeSelector option[value="midnight"] {
+  background-color: #0a0e1a;
+  color: #7986cb;
+}
+
+/* Username section in right sidebar */
+.username-section {
+  margin-bottom: 20px;
+  padding: 10px;
+  background: var(--bg-color);
+  border-radius: 6px;
+  border: 1px solid var(--border-color);
+}

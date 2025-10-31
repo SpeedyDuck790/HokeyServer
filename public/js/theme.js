@@ -114,28 +114,6 @@ function applyTheme(themeName) {
   
   currentTheme = themeName;
   localStorage.setItem('hokeyTheme', themeName);
-  
-  // Update theme button text if using old toggle button
-  updateThemeButton();
-}
-
-/**
- * Toggle between light and dark theme (legacy)
- */
-function toggleTheme() {
-  const newTheme = currentTheme === 'light' ? 'dark' : 'light';
-  applyTheme(newTheme);
-}
-
-/**
- * Update theme button icon
- */
-function updateThemeButton() {
-  const toggleBtn = document.getElementById('themeToggle');
-  if (toggleBtn) {
-    const icon = currentTheme === 'light' ? '🌙' : '☀️';
-    toggleBtn.textContent = icon;
-  }
 }
 
 /**
