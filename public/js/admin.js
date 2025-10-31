@@ -349,9 +349,10 @@ async function searchUsers() {
       }
     });
     
-    const users = await response.json();
+    const data = await response.json();
+    const users = data.success ? data.data.users : [];
     
-    if (users.length === 0) {
+    if (!users || users.length === 0) {
       resultsDiv.innerHTML = '<p style="text-align: center; opacity: 0.5;">No users found</p>';
       return;
     }
@@ -414,7 +415,15 @@ async function loadRoomManagement() {
   try {
     const response = await fetch('/api/rooms');
     const data = await response.json();
-    const rooms = data.data || [];
+    const rooms = data.rooms || data.data || [];
+    
+    if (rooms.length === 0) {
+      content.innerHTML = `
+        <h3>Room Management</h3>
+        <p style="text-align: center; opacity: 0.5; padding: 20px;">No rooms found</p>
+      `;
+      return;
+    }
     
     content.innerHTML = `
       <h3>Room Management</h3>
@@ -707,5 +716,23 @@ if (typeof escapeHtml === 'undefined') {
     const div = document.createElement('div');
     div.textContent = text;
     return div.innerHTML;
+  }
+}
+
+// Helper function to get badge emoji
+if (typeof getBadgeEmojiForChat === 'undefined') {
+  function getBadgeEmojiForChat(badge) {
+    const badges = {
+      'site-admin': '👑',
+      'chat-admin': '🔧',
+      'chat-mod': '🛡️',
+      'vip': '⭐',
+      'elder': '🎖️',
+      'founder': '💎',
+      'contributor': '🤝',
+      'verified': '✅',
+      'premium': '💫'
+    };
+    return badges[badge] || '🏅';
   }
 }

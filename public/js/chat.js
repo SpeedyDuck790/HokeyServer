@@ -571,6 +571,10 @@ async function createRoom(event) {
       document.getElementById('roomDescription').value = '';
       document.getElementById('roomPassword').value = '';
       document.getElementById('saveToDatabase').checked = true;
+      
+      // Refresh user profile to get updated roomRoles
+      await refreshUserProfile();
+      
       loadRooms();
       switchRoom(roomName, !!roomPassword, roomPassword);
     } else {
@@ -579,6 +583,35 @@ async function createRoom(event) {
   } catch (error) {
     console.error('Error creating room:', error);
     alert('Failed to create room.');
+  }
+}
+
+/**
+ * Refresh user profile from server
+ */
+async function refreshUserProfile() {
+  try {
+    const token = localStorage.getItem('hokeyAuthToken');
+    if (!token) return;
+    
+    const response = await fetch('/api/users/profile', {
+      headers: {
+        'Authorization': `Bearer ${token}`
+      }
+    });
+    
+    if (response.ok) {
+      const data = await response.json();
+      if (data.data && data.data.user) {
+        localStorage.setItem('hokeyCurrentUser', JSON.stringify(data.data.user));
+        // Refresh profile display if function exists
+        if (typeof displayUserProfile === 'function') {
+          displayUserProfile(data.data.user);
+        }
+      }
+    }
+  } catch (error) {
+    console.error('Error refreshing user profile:', error);
   }
 }
 
