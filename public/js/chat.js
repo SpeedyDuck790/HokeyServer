@@ -160,6 +160,9 @@ function displayRooms(rooms) {
     // Highlight current room with border
     if (room.name === currentRoom) {
       roomItem.classList.add('active');
+      // Clear unread count for current room
+      unreadCounts[room.name] = 0;
+      localStorage.setItem('unreadCounts', JSON.stringify(unreadCounts));
     }
     
     // Highlight global room with gold
@@ -169,15 +172,20 @@ function displayRooms(rooms) {
     
     const hasPassword = room.hasPassword ? '🔒' : '';
     const saveMode = room.persistMessages ? '💾' : '🧠';
-    const onlineCount = room.onlineCount || 0; // Use real-time count
+    const onlineCount = room.onlineCount || 0;
     const totalMessages = room.messageCount || 0;
+    const unreadCount = unreadCounts[room.name] || 0;
+    const unreadBadge = unreadCount > 0 ? `<span class="unread-badge">${unreadCount}</span>` : '';
+    const lastMsg = lastMessages[room.name];
+    const lastMsgPreview = lastMsg ? `<p class="room-last-message">${escapeHtml(lastMsg.username)}: ${escapeHtml(lastMsg.message.substring(0, 40))}${lastMsg.message.length > 40 ? '...' : ''}</p>` : '';
     
     roomItem.innerHTML = `
       <div class="room-item-header">
-        <strong>${hasPassword} ${escapeHtml(room.name)}</strong>
+        <strong>${hasPassword} ${escapeHtml(room.name)} ${unreadBadge}</strong>
         <span class="room-item-count">${saveMode}</span>
       </div>
       <p class="room-item-desc">${escapeHtml(room.description || 'No description')}</p>
+      ${lastMsgPreview}
       <p class="room-item-stats">👥 ${onlineCount} online | 💬 ${totalMessages} msgs</p>
     `;
     
@@ -516,6 +524,14 @@ socket.on('message history', function(history) {
 
 // Listen for messages from the server
 socket.on('chat message', function(msg) {
+  // Track last message for this room
+  lastMessages[msg.room] = {
+    username: msg.username,
+    message: msg.userMsg,
+    timestamp: msg.timestamp
+  };
+  localStorage.setItem('lastMessages', JSON.stringify(lastMessages));
+  
   // Only display messages from the current room
   if (msg.room === currentRoom) {
     const isOwnMessage = msg.username === getCurrentUsername();
@@ -551,6 +567,10 @@ socket.on('chat message', function(msg) {
     // Auto-scroll to bottom
     const msgDiv = document.getElementById('messages');
     msgDiv.scrollTop = msgDiv.scrollHeight;
+  } else {
+    // Increment unread count for other rooms
+    unreadCounts[msg.room] = (unreadCounts[msg.room] || 0) + 1;
+    localStorage.setItem('unreadCounts', JSON.stringify(unreadCounts));
   }
 });
 
