@@ -187,7 +187,17 @@ userSchema.methods.comparePassword = async function(candidatePassword) {
 };
 
 // Instance method to upgrade guest to full account
-userSchema.methods.upgradeToFullAccount = async function(email, password) {
+userSchema.methods.upgradeToFullAccount = async function(email, password, username) {
+  // Check if username is provided and different from current
+  if (username && username !== this.username) {
+    // Check if new username is already taken
+    const existingUser = await this.constructor.findOne({ username: username.toLowerCase() });
+    if (existingUser && !existingUser._id.equals(this._id)) {
+      throw new Error('Username already taken');
+    }
+    this.username = username;
+  }
+  
   this.email = email;
   this.password = password;
   this.isGuest = false;

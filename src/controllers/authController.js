@@ -127,7 +127,7 @@ class AuthController {
   async upgradeGuest(req, res) {
     try {
       const userId = req.userId;
-      const { email, password } = req.body;
+      const { email, password, username } = req.body;
 
       if (!email || !password) {
         return res.status(400).json({
@@ -136,7 +136,7 @@ class AuthController {
         });
       }
 
-      const result = await authService.upgradeGuest(userId, email, password);
+      const result = await authService.upgradeGuest(userId, email, password, username);
 
       res.status(200).json({
         success: true,

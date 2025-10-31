@@ -92,7 +92,7 @@ class AuthService {
   /**
    * Upgrade guest account to full account
    */
-  async upgradeGuest(userId, email, password) {
+  async upgradeGuest(userId, email, password, username) {
     try {
       const user = await User.findById(userId);
       if (!user) {
@@ -109,8 +109,8 @@ class AuthService {
         throw new Error('Email already registered');
       }
       
-      // Upgrade user
-      await user.upgradeToFullAccount(email, password);
+      // Upgrade user (with optional username change)
+      await user.upgradeToFullAccount(email, password, username);
       
       // Generate new token
       const token = generateToken(user._id);

@@ -288,6 +288,14 @@ function showUpgradeModal() {
       
       <form id="upgradeForm" onsubmit="handleUpgrade(event)">
         <input 
+          type="text" 
+          id="upgradeUsername" 
+          placeholder="Username (optional - keep current: ${getCurrentUser()?.username || 'Guest'})" 
+          minlength="2"
+          maxlength="30"
+          style="width: 100%; padding: 10px; margin-bottom: 10px; border-radius: 6px; background: var(--input-bg); color: var(--text-color); border: 1px solid var(--border-color);">
+        
+        <input 
           type="email" 
           id="upgradeEmail" 
           placeholder="Email" 
@@ -320,11 +328,12 @@ function showUpgradeModal() {
 async function handleUpgrade(event) {
   event.preventDefault();
   
+  const username = document.getElementById('upgradeUsername').value.trim();
   const email = document.getElementById('upgradeEmail').value;
   const password = document.getElementById('upgradePassword').value;
   
   try {
-    const user = await upgradeGuest(email, password);
+    const user = await upgradeGuest(email, password, username || undefined);
     alert('Account created successfully! Welcome to HokeyChat! 🎉');
     document.querySelector('.modal').remove();
     

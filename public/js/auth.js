@@ -152,11 +152,16 @@ async function createGuestAccount(username) {
 /**
  * Upgrade guest to full account
  */
-async function upgradeGuest(email, password) {
+async function upgradeGuest(email, password, username) {
   try {
     const token = getAuthToken();
     if (!token) {
       throw new Error('Not authenticated');
+    }
+
+    const body = { email, password };
+    if (username) {
+      body.username = username;
     }
 
     const response = await fetch('/api/auth/upgrade', {
@@ -165,7 +170,7 @@ async function upgradeGuest(email, password) {
         'Content-Type': 'application/json',
         'Authorization': `Bearer ${token}`
       },
-      body: JSON.stringify({ email, password })
+      body: JSON.stringify(body)
     });
 
     const data = await response.json();
