@@ -22,6 +22,7 @@ router.post('/gravatar', authenticate, userController.setGravatar);
 // Friend routes (require full account)
 router.get('/friends', requireAuth, userController.getFriends);
 router.get('/friends/online', requireAuth, userController.getOnlineFriends);
+router.get('/friends/requests', requireAuth, userController.getFriendRequests);
 router.post('/friends/request', requireAuth, userController.sendFriendRequest);
 router.post('/friends/accept', requireAuth, userController.acceptFriendRequest);
 router.post('/friends/reject', requireAuth, userController.rejectFriendRequest);

@@ -209,6 +209,15 @@ function displayUserProfile(user) {
       
       <hr style="border: none; border-top: 1px solid var(--border-color); margin: 15px 0;">
       
+      <div class="profile-friend-requests" style="margin-top: 15px;">
+        <label style="display: block; margin-bottom: 10px;">Friend Requests:</label>
+        <div id="friendRequestsList" style="max-height: 150px; overflow-y: auto;">
+          <div style="text-align: center; opacity: 0.5; padding: 10px;">Loading...</div>
+        </div>
+      </div>
+      
+      <hr style="border: none; border-top: 1px solid var(--border-color); margin: 15px 0;">
+      
       <div class="profile-friends" style="margin-top: 15px;">
         <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 10px;">
           <label style="margin: 0;">Friends:</label>
@@ -236,9 +245,12 @@ function displayUserProfile(user) {
     ` : ''}
   `;
   
-  // Load friends list if user is not a guest
+  // Load friends list and friend requests if user is not a guest
   if (!isGuest) {
-    setTimeout(() => loadFriendsList(), 100);
+    setTimeout(() => {
+      loadFriendsList();
+      loadFriendRequests();
+    }, 100);
   }
 }
 
@@ -609,6 +621,14 @@ function showUserProfileModal(user) {
           </div>
         ` : ''}
         
+        ${!isGuest ? `
+          <div style="margin: 20px 0; text-align: center;">
+            <button onclick="sendFriendRequestFromModal('${user.username}')" style="padding: 10px 20px; border-radius: 6px; background: #4CAF50; color: white; border: none; cursor: pointer; font-size: 1em;">
+              Add Friend
+            </button>
+          </div>
+        ` : ''}
+        
         ${!isGuest && user.profile?.bio ? `
           <div style="margin: 20px 0; padding: 15px; background: var(--input-bg); border-radius: 8px;">
             <strong>Bio:</strong>
@@ -700,6 +720,117 @@ async function loadFriendsList() {
 }
 
 /**
+ * Load and display friend requests
+ */
+async function loadFriendRequests() {
+  const requestsListEl = document.getElementById('friendRequestsList');
+  if (!requestsListEl) return;
+  
+  try {
+    const token = getAuthToken();
+    if (!token) return;
+    
+    const response = await fetch('/api/users/friends/requests', {
+      headers: {
+        'Authorization': `Bearer ${token}`
+      }
+    });
+    
+    if (!response.ok) {
+      throw new Error('Failed to load friend requests');
+    }
+    
+    const data = await response.json();
+    const requests = data.data || [];
+    
+    if (requests.length === 0) {
+      requestsListEl.innerHTML = '<div style="text-align: center; opacity: 0.5; padding: 10px;">No pending requests</div>';
+      return;
+    }
+    
+    requestsListEl.innerHTML = requests.map(request => {
+      const fromUser = request.from;
+      return `
+        <div style="padding: 8px; border-radius: 6px; background: var(--input-bg); margin-bottom: 5px;">
+          <div style="margin-bottom: 8px;">
+            <strong>${escapeHtml(fromUser.username)}</strong>
+          </div>
+          <div style="display: flex; gap: 5px;">
+            <button onclick="acceptFriendRequest('${fromUser._id}')" style="flex: 1; padding: 6px; border-radius: 4px; background: #4CAF50; color: white; border: none; cursor: pointer; font-size: 0.9em;">
+              Accept
+            </button>
+            <button onclick="rejectFriendRequest('${fromUser._id}')" style="flex: 1; padding: 6px; border-radius: 4px; background: #f44336; color: white; border: none; cursor: pointer; font-size: 0.9em;">
+              Reject
+            </button>
+          </div>
+        </div>
+      `;
+    }).join('');
+    
+  } catch (error) {
+    console.error('Error loading friend requests:', error);
+    requestsListEl.innerHTML = '<div style="text-align: center; opacity: 0.5; padding: 10px;">Error loading requests</div>';
+  }
+}
+
+/**
+ * Accept friend request
+ */
+async function acceptFriendRequest(fromUserId) {
+  try {
+    const token = getAuthToken();
+    const response = await fetch('/api/users/friends/accept', {
+      method: 'POST',
+      headers: {
+        'Authorization': `Bearer ${token}`,
+        'Content-Type': 'application/json'
+      },
+      body: JSON.stringify({ fromUserId })
+    });
+    
+    if (!response.ok) {
+      throw new Error('Failed to accept friend request');
+    }
+    
+    // Reload friend requests and friends list
+    await loadFriendRequests();
+    await loadFriendsList();
+    
+    alert('Friend request accepted!');
+  } catch (error) {
+    alert('Error: ' + error.message);
+  }
+}
+
+/**
+ * Reject friend request
+ */
+async function rejectFriendRequest(fromUserId) {
+  try {
+    const token = getAuthToken();
+    const response = await fetch('/api/users/friends/reject', {
+      method: 'POST',
+      headers: {
+        'Authorization': `Bearer ${token}`,
+        'Content-Type': 'application/json'
+      },
+      body: JSON.stringify({ fromUserId })
+    });
+    
+    if (!response.ok) {
+      throw new Error('Failed to reject friend request');
+    }
+    
+    // Reload friend requests
+    await loadFriendRequests();
+    
+    alert('Friend request rejected');
+  } catch (error) {
+    alert('Error: ' + error.message);
+  }
+}
+
+/**
  * Show add friend modal
  */
 function showAddFriendModal() {
@@ -774,6 +905,35 @@ async function handleAddFriend() {
   } catch (error) {
     errorEl.textContent = error.message;
     errorEl.style.display = 'block';
+  }
+}
+
+/**
+ * Send friend request from user profile modal
+ */
+async function sendFriendRequestFromModal(username) {
+  try {
+    const token = getAuthToken();
+    const response = await fetch('/api/users/friends/request', {
+      method: 'POST',
+      headers: {
+        'Authorization': `Bearer ${token}`,
+        'Content-Type': 'application/json'
+      },
+      body: JSON.stringify({ username })
+    });
+    
+    if (!response.ok) {
+      const error = await response.json();
+      throw new Error(error.message || 'Failed to send friend request');
+    }
+    
+    alert('Friend request sent to ' + username + '!');
+    
+    // Reload friends list
+    await loadFriendsList();
+  } catch (error) {
+    alert('Error: ' + error.message);
   }
 }
 

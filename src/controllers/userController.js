@@ -128,6 +128,27 @@ class UserController {
   }
 
   /**
+   * Get friend requests
+   */
+  async getFriendRequests(req, res) {
+    try {
+      const userId = req.userId;
+      const friendRequests = await userService.getFriendRequests(userId);
+
+      res.status(200).json({
+        success: true,
+        data: friendRequests
+      });
+    } catch (error) {
+      console.error('Get friend requests error:', error);
+      res.status(400).json({
+        success: false,
+        error: error.message
+      });
+    }
+  }
+
+  /**
    * Send friend request
    */
   async sendFriendRequest(req, res) {

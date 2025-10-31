@@ -126,6 +126,30 @@ class UserService {
   }
   
   /**
+   * Get friend requests
+   */
+  async getFriendRequests(userId) {
+    try {
+      const user = await User.findById(userId)
+        .populate('friendRequests.from', 'username email profile.avatar profile.status createdAt');
+      
+      if (!user) {
+        throw new Error('User not found');
+      }
+      
+      // Map to include full user info
+      const requests = user.friendRequests.map(req => ({
+        from: req.from,
+        timestamp: req.timestamp
+      }));
+      
+      return requests;
+    } catch (error) {
+      throw error;
+    }
+  }
+  
+  /**
    * Send friend request
    */
   async sendFriendRequest(fromUserId, toUsername) {
