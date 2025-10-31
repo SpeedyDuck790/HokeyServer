@@ -412,6 +412,24 @@ function initializeSocketListeners() {
   socket.on('disconnect', function() {
     console.log('Disconnected from server');
   });
+
+  // Listen for user status changes
+  socket.on('user status changed', function(data) {
+    console.log('User status changed:', data);
+    // Update friends list if it's visible
+    if (document.getElementById('friendsList')) {
+      loadFriendsList();
+    }
+    // Update profile popup if viewing this user
+    updateProfilePopupStatus(data.userId, data.status);
+  });
+
+  // Listen for user custom status changes
+  socket.on('user custom status changed', function(data) {
+    console.log('User custom status changed:', data);
+    // Update profile popup if viewing this user
+    updateProfilePopupCustomStatus(data.userId, data.customStatus);
+  });
 }
 
 /**

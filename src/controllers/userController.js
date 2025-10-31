@@ -322,10 +322,7 @@ class UserController {
       const userId = req.userId;
       const friends = await userService.getFriends(userId);
 
-      res.status(200).json({
-        success: true,
-        data: { friends }
-      });
+      res.status(200).json(friends);
     } catch (error) {
       console.error('Get friends error:', error);
       res.status(400).json({
@@ -343,10 +340,7 @@ class UserController {
       const userId = req.userId;
       const friends = await userService.getOnlineFriends(userId);
 
-      res.status(200).json({
-        success: true,
-        data: { friends }
-      });
+      res.status(200).json(friends);
     } catch (error) {
       console.error('Get online friends error:', error);
       res.status(400).json({

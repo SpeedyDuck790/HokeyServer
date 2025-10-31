@@ -433,14 +433,18 @@ function attachSocketHandlers(io, options = {}) {
       if (!currentUserId) return;
 
       try {
-        const user = await User.findById(currentUserId);
+        const user = await User.findById(currentUserId).populate('friends', 'username');
         if (user) {
           user.profile.status = status;
           user.lastActivity = new Date();
           await user.save();
           
-          // Broadcast status change to friends
-          // TODO: Implement friend notification
+          // Broadcast status change to all clients in all rooms
+          io.emit('user status changed', {
+            userId: currentUserId,
+            username: currentUsername,
+            status: status
+          });
         }
       } catch (error) {
         console.error('Error updating user status:', error);
@@ -456,6 +460,13 @@ function attachSocketHandlers(io, options = {}) {
         if (user) {
           user.profile.customStatus = customStatus;
           await user.save();
+          
+          // Broadcast custom status change
+          io.emit('user custom status changed', {
+            userId: currentUserId,
+            username: currentUsername,
+            customStatus: customStatus
+          });
         }
       } catch (error) {
         console.error('Error updating custom status:', error);

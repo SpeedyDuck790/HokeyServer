@@ -10,11 +10,11 @@ const { requireAuth } = require('../middleware/auth');
  */
 
 // Message moderation
-router.delete('/delete-message/:messageId', requireAuth, moderationController.deleteMessage);
+router.delete('/delete-message/:messageId', requireAuth, (req, res) => moderationController.deleteMessage(req, res));
 
 // User moderation
-router.post('/ban-user', requireAuth, moderationController.banUser);
-router.post('/unban-user', requireAuth, moderationController.unbanUser);
-router.post('/kick-user', requireAuth, moderationController.kickUser);
+router.post('/ban-user', requireAuth, (req, res) => moderationController.banUser(req, res));
+router.post('/unban-user', requireAuth, (req, res) => moderationController.unbanUser(req, res));
+router.post('/kick-user', requireAuth, (req, res) => moderationController.kickUser(req, res));
 
 module.exports = router;

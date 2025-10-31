@@ -325,11 +325,26 @@ function getBadgeTheme(badge) {
  */
 async function handleStatusChange(status) {
   try {
-    await updateStatus(status);
+    const user = await updateStatus(status);
+    
+    // Update local user data
+    const currentUser = JSON.parse(localStorage.getItem('hokeyCurrentUser') || '{}');
+    if (currentUser.profile) {
+      currentUser.profile.status = status;
+      localStorage.setItem('hokeyCurrentUser', JSON.stringify(currentUser));
+    }
+    
     console.log('Status updated to:', status);
   } catch (error) {
     alert('Failed to update status');
     console.error(error);
+    
+    // Revert dropdown to previous value
+    const statusSelect = document.getElementById('statusSelect');
+    if (statusSelect) {
+      const currentUser = JSON.parse(localStorage.getItem('hokeyCurrentUser') || '{}');
+      statusSelect.value = currentUser.profile?.status || 'online';
+    }
   }
 }
 
@@ -1272,5 +1287,50 @@ async function handleUnblockUser(username) {
   } catch (error) {
     alert('Error: ' + error.message);
   }
+}
+
+/**
+ * Update profile popup status when receiving socket event
+ */
+function updateProfilePopupStatus(userId, status) {
+  const modal = document.querySelector('.profile-modal');
+  if (!modal) return;
+  
+  // Check if this is the user currently being viewed
+  const statusDisplay = modal.querySelector('div[style*="text-align: center"]');
+  if (!statusDisplay) return;
+  
+  const statusEmoji = status === 'online' ? '🟢' : 
+                      status === 'away' ? '🟡' : 
+                      status === 'dnd' ? '🔴' : 
+                      status === 'invisible' ? '⚫' : '⚫';
+  
+  const statusText = status === 'invisible' ? 'Offline' : status.charAt(0).toUpperCase() + status.slice(1);
+  
+  // Update the status display in the modal
+  const statusSection = statusDisplay.parentElement.querySelector('div[style*="text-align: center"][style*="margin-bottom: 10px"]');
+  if (statusSection && statusSection.innerHTML.includes('🟢') || statusSection.innerHTML.includes('🟡') || statusSection.innerHTML.includes('🔴') || statusSection.innerHTML.includes('⚫')) {
+    statusSection.innerHTML = `
+      <span style="font-size: 1.2em;">${statusEmoji}</span>
+      <span style="text-transform: capitalize;">${statusText}</span>
+    `;
+  }
+}
+
+/**
+ * Update profile popup custom status when receiving socket event
+ */
+function updateProfilePopupCustomStatus(userId, customStatus) {
+  const modal = document.querySelector('.profile-modal');
+  if (!modal) return;
+  
+  // Find and update custom status display
+  const customStatusDivs = modal.querySelectorAll('div[style*="font-style: italic"]');
+  customStatusDivs.forEach(div => {
+    if (div.innerHTML.includes('"')) {
+      div.innerHTML = customStatus ? `"${escapeHtml(customStatus)}"` : '';
+      div.style.display = customStatus ? 'block' : 'none';
+    }
+  });
 }
 

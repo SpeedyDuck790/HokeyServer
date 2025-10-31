@@ -10,15 +10,15 @@ const { requireAuth } = require('../middleware/auth');
  */
 
 // Badge management
-router.post('/assign-badge', requireAuth, adminController.assignBadge);
-router.post('/remove-badge', requireAuth, adminController.removeBadge);
+router.post('/assign-badge', requireAuth, (req, res) => adminController.assignBadge(req, res));
+router.post('/remove-badge', requireAuth, (req, res) => adminController.removeBadge(req, res));
 
 // User management
-router.delete('/delete-user/:userId', requireAuth, adminController.deleteUser);
+router.delete('/delete-user/:userId', requireAuth, (req, res) => adminController.deleteUser(req, res));
 
 // Room management
-router.delete('/delete-room/:roomId', requireAuth, adminController.deleteRoom);
-router.post('/assign-room-role', requireAuth, adminController.assignRoomRole);
-router.delete('/remove-room-role', requireAuth, adminController.removeRoomRole);
+router.delete('/delete-room/:roomId', requireAuth, (req, res) => adminController.deleteRoom(req, res));
+router.post('/assign-room-role', requireAuth, (req, res) => adminController.assignRoomRole(req, res));
+router.delete('/remove-room-role', requireAuth, (req, res) => adminController.removeRoomRole(req, res));
 
 module.exports = router;
