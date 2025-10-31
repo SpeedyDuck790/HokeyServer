@@ -151,8 +151,14 @@ function displayUserProfile(user) {
       ` : ''}
       
       ${isGuest ? `
-        <button onclick="showUpgradeModal()" style="width: 100%; margin-bottom: 10px; background: #4CAF50;">
-          🔒 Create Account
+        <button onclick="showLoginModal()" style="width: 100%; margin-bottom: 8px; background: #2196F3;">
+          🔑 Login
+        </button>
+        <button onclick="showRegisterModal()" style="width: 100%; margin-bottom: 8px; background: #4CAF50;">
+          � Register
+        </button>
+        <button onclick="showUpgradeModal()" style="width: 100%; margin-bottom: 10px; background: #9C27B0;">
+          ⬆️ Upgrade Guest
         </button>
       ` : `
         <button onclick="logout()" style="width: 100%; margin-bottom: 10px; background: #f44336;">
