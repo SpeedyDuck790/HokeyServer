@@ -14,6 +14,10 @@ const roomService = require('./src/services/roomService');
 // Import controllers
 const roomController = require('./src/controllers/roomController');
 
+// Import routes
+const authRoutes = require('./src/routes/auth');
+const userRoutes = require('./src/routes/user');
+
 const app = express(); // Express is a web framework that simplifies server creation
 const server = http.createServer(app); // Create HTTP server
 const io = new Server(server); // Attach Socket.io to the server
@@ -25,6 +29,10 @@ app.use(express.json());
 
 // Serve static files from the public directory (for CSS, JS, images, etc.)
 app.use(express.static(path.join(__dirname, 'public')));
+
+// API Routes
+app.use('/api/auth', authRoutes);
+app.use('/api/users', userRoutes);
 
 // Serve main chat page (global chat with side menu) at root
 app.get('/', (req, res) => {
