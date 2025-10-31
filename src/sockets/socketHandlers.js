@@ -116,18 +116,53 @@ function attachSocketHandlers(io, options = {}) {
             if (roomData && roomData.persistMessages) {
               // Load messages from database
               const dbMessages = await chatService.getLimitedMessages(room, 50);
-              // Convert to plain objects and ensure _id is included
-              history = dbMessages.map(msg => {
-                const obj = msg.toObject ? msg.toObject() : msg;
-                // Convert reactions Map to plain object
-                const reactions = obj.reactions ? Object.fromEntries(obj.reactions) : {};
-                return {
-                  ...obj,
-                  _id: obj._id ? obj._id.toString() : undefined,
-                  userMsg: obj.message, // Map 'message' field to 'userMsg' for frontend
-                  reactions: reactions // Convert Map to object for JSON serialization
+              
+              // Get current user's blocked list if authenticated
+              let blockedUserIds = [];
+              if (currentUserId) {
+                try {
+                  const currentUser = await User.findById(currentUserId).select('blockedUsers');
+                  blockedUserIds = currentUser ? currentUser.blockedUsers.map(id => id.toString()) : [];
+                } catch (error) {
+                  console.error('Error fetching blocked users:', error);
+                }
+              }
+              
+              // Get all unique user IDs from messages to fetch badge info
+              const userIds = [...new Set(dbMessages.map(msg => msg.userId).filter(id => id))];
+              const usersWithBadges = await User.find({ _id: { $in: userIds } }).select('_id profile.badges profile.badgeSettings');
+              const badgeMap = {};
+              usersWithBadges.forEach(user => {
+                badgeMap[user._id.toString()] = {
+                  badges: user.profile?.badges || [],
+                  badgeTheme: user.profile?.badgeSettings?.messageTheme || 'default'
                 };
               });
+              
+              // Convert to plain objects and filter out blocked users
+              history = dbMessages
+                .filter(msg => {
+                  // Filter out messages from blocked users
+                  if (msg.userId && blockedUserIds.includes(msg.userId.toString())) {
+                    return false;
+                  }
+                  return true;
+                })
+                .map(msg => {
+                  const obj = msg.toObject ? msg.toObject() : msg;
+                  const userId = obj.userId ? obj.userId.toString() : null;
+                  
+                  // Convert reactions Map to plain object
+                  const reactions = obj.reactions ? Object.fromEntries(obj.reactions) : {};
+                  return {
+                    ...obj,
+                    _id: obj._id ? obj._id.toString() : undefined,
+                    userMsg: obj.message, // Map 'message' field to 'userMsg' for frontend
+                    reactions: reactions, // Convert Map to object for JSON serialization
+                    badges: userId && badgeMap[userId] ? badgeMap[userId].badges : [],
+                    badgeTheme: userId && badgeMap[userId] ? badgeMap[userId].badgeTheme : 'default'
+                  };
+                });
               console.log(`Loaded ${history.length} messages from database for room: ${room}`);
             }
           } catch (error) {
@@ -248,6 +283,19 @@ function attachSocketHandlers(io, options = {}) {
         ...data, 
         messageType
       };
+      
+      // Add user badge information if authenticated
+      if (currentUserId) {
+        try {
+          const user = await User.findById(currentUserId).select('profile.badges profile.badgeSettings');
+          if (user && user.profile) {
+            broadcastData.badges = user.profile.badges || [];
+            broadcastData.badgeTheme = user.profile.badgeSettings?.messageTheme || 'default';
+          }
+        } catch (error) {
+          console.error('Error fetching user badges:', error);
+        }
+      }
       
       // Add _id from memory copy if it exists
       if (msgHistoryByRoom[data.room] && msgHistoryByRoom[data.room].length > 0) {

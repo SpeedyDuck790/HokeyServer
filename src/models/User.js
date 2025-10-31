@@ -70,9 +70,38 @@ const userSchema = new mongoose.Schema({
     },
     badges: [{
       type: String,
-      enum: ['founder', 'moderator', 'vip', 'contributor', 'verified', 'premium']
-    }]
+      enum: ['site-admin', 'chat-admin', 'chat-mod', 'vip', 'elder', 'founder', 'contributor', 'verified', 'premium']
+    }],
+    badgeSettings: {
+      messageTheme: {
+        type: String,
+        enum: ['default', 'gold', 'purple', 'blue', 'green', 'red'],
+        default: 'default'
+      }
+    }
   },
+  
+  // Room-specific roles (for chat admins and mods)
+  roomRoles: [{
+    roomId: {
+      type: mongoose.Schema.Types.ObjectId,
+      ref: 'Room'
+    },
+    roomName: String,
+    role: {
+      type: String,
+      enum: ['admin', 'moderator'],
+      required: true
+    },
+    grantedAt: {
+      type: Date,
+      default: Date.now
+    },
+    grantedBy: {
+      type: mongoose.Schema.Types.ObjectId,
+      ref: 'User'
+    }
+  }],
   
   // Social features
   friends: [{

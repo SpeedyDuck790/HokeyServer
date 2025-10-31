@@ -807,6 +807,35 @@ function createMessageElement(data) {
     msgElem.classList.add('message-reply');
   }
   
+  // Apply badge theme styling if user has special badge
+  const badgeTheme = data.badgeTheme || 'default';
+  const badges = data.badges || [];
+  
+  // Determine if user has a theme-changing badge
+  let themeClass = '';
+  let borderStyle = '';
+  if (badges.includes('vip') || badgeTheme === 'gold') {
+    themeClass = 'message-vip';
+    borderStyle = 'border-left: 4px solid #FFD700;';
+  } else if (badges.includes('elder') || badgeTheme === 'purple') {
+    themeClass = 'message-elder';
+    borderStyle = 'border-left: 4px solid #9C27B0;';
+  } else if (badges.includes('site-admin')) {
+    themeClass = 'message-admin';
+    borderStyle = 'border-left: 4px solid #f44336;';
+  } else if (badges.includes('chat-admin')) {
+    themeClass = 'message-chat-admin';
+    borderStyle = 'border-left: 4px solid #2196F3;';
+  } else if (badges.includes('chat-mod')) {
+    themeClass = 'message-mod';
+    borderStyle = 'border-left: 4px solid #4CAF50;';
+  }
+  
+  if (themeClass) {
+    msgElem.classList.add(themeClass);
+    msgElem.style.cssText = borderStyle + ' padding-left: 8px; background: rgba(255, 255, 255, 0.02);';
+  }
+  
   const time = formatRelativeTime(data.timestamp);
   
   let messageHTML = '';
@@ -826,6 +855,15 @@ function createMessageElement(data) {
     `;
   }
   
+  // Build badge display for username
+  let badgeHTML = '';
+  if (badges && badges.length > 0) {
+    // Show first badge icon next to username
+    const primaryBadge = badges[0];
+    const badgeEmoji = getBadgeEmojiForChat(primaryBadge);
+    badgeHTML = `<span style="font-size: 0.9em; margin-left: 4px;" title="${getBadgeNameForChat(primaryBadge)}">${badgeEmoji}</span>`;
+  }
+  
   // Message content
   const linkedMessage = linkifyText(escapeHtml(data.userMsg || data.message));
   const messageId = data._id || data.timestamp;
@@ -833,7 +871,7 @@ function createMessageElement(data) {
   messageHTML += `
     <div class="message-content">
       <span class="message-time">[${time}]</span>
-      <span class="message-username" onclick="viewUserProfile('${escapeHtml(data.username)}')" style="cursor: pointer; text-decoration: underline;" title="View profile">${escapeHtml(data.username)}:</span>
+      <span class="message-username" onclick="viewUserProfile('${escapeHtml(data.username)}')" style="cursor: pointer; text-decoration: underline;" title="View profile">${escapeHtml(data.username)}${badgeHTML}:</span>
       <span class="message-text">${linkedMessage}</span>
       <button class="message-react-btn" onclick='showReactionPicker("${messageId}", event)' title="Add reaction">😊</button>
       <button class="message-reply-btn" onclick='replyToMessage(${JSON.stringify({
@@ -864,6 +902,42 @@ function createMessageElement(data) {
   msgElem.innerHTML = messageHTML;
   msgElem.dataset.messageId = messageId;
   return msgElem;
+}
+
+/**
+ * Get badge emoji for chat messages
+ */
+function getBadgeEmojiForChat(badge) {
+  const badges = {
+    'site-admin': '👑',
+    'chat-admin': '🔧',
+    'chat-mod': '🛡️',
+    'vip': '⭐',
+    'elder': '🎖️',
+    'founder': '💎',
+    'contributor': '🤝',
+    'verified': '✅',
+    'premium': '💫'
+  };
+  return badges[badge] || '🏅';
+}
+
+/**
+ * Get badge display name for chat
+ */
+function getBadgeNameForChat(badge) {
+  const names = {
+    'site-admin': 'Site Admin',
+    'chat-admin': 'Chat Admin',
+    'chat-mod': 'Chat Moderator',
+    'vip': 'VIP',
+    'elder': 'Elder',
+    'founder': 'Founder',
+    'contributor': 'Contributor',
+    'verified': 'Verified',
+    'premium': 'Premium'
+  };
+  return names[badge] || badge;
 }
 
 /**

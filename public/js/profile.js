@@ -201,8 +201,15 @@ function displayUserProfile(user) {
       ${user.profile?.badges && user.profile.badges.length > 0 ? `
         <div class="profile-badges" style="margin-top: 15px;">
           <label style="display: block; margin-bottom: 5px;">Badges:</label>
-          <div style="display: flex; gap: 5px; flex-wrap: wrap;">
-            ${user.profile.badges.map(badge => `<span class="badge badge-${badge}">${getBadgeEmoji(badge)}</span>`).join('')}
+          <div style="display: flex; gap: 8px; flex-wrap: wrap;">
+            ${user.profile.badges.map(badge => {
+              const theme = getBadgeTheme(badge);
+              const bgColor = theme === 'gold' ? '#FFD700' : theme === 'purple' ? '#9C27B0' : theme === 'blue' ? '#2196F3' : theme === 'green' ? '#4CAF50' : theme === 'red' ? '#f44336' : '#666';
+              return `<span style="background: ${bgColor}; color: white; padding: 4px 10px; border-radius: 12px; font-size: 0.85em; display: inline-flex; align-items: center; gap: 4px;">
+                <span>${getBadgeEmoji(badge)}</span>
+                <span>${getBadgeName(badge)}</span>
+              </span>`;
+            }).join('')}
           </div>
         </div>
       ` : ''}
@@ -255,18 +262,57 @@ function displayUserProfile(user) {
 }
 
 /**
- * Get badge emoji
+ * Get badge emoji and info
  */
 function getBadgeEmoji(badge) {
   const badges = {
-    'founder': '👑',
-    'moderator': '🛡️',
+    'site-admin': '👑',
+    'chat-admin': '🔧',
+    'chat-mod': '🛡️',
     'vip': '⭐',
-    'contributor': '💎',
-    'verified': '✓',
+    'elder': '🎖️',
+    'founder': '�',
+    'contributor': '🤝',
+    'verified': '✅',
     'premium': '💫'
   };
   return badges[badge] || '🏅';
+}
+
+/**
+ * Get badge display name
+ */
+function getBadgeName(badge) {
+  const names = {
+    'site-admin': 'Site Admin',
+    'chat-admin': 'Chat Admin',
+    'chat-mod': 'Chat Moderator',
+    'vip': 'VIP',
+    'elder': 'Elder',
+    'founder': 'Founder',
+    'contributor': 'Contributor',
+    'verified': 'Verified',
+    'premium': 'Premium'
+  };
+  return names[badge] || badge;
+}
+
+/**
+ * Get badge theme color for messages
+ */
+function getBadgeTheme(badge) {
+  const themes = {
+    'site-admin': 'red',
+    'chat-admin': 'blue',
+    'chat-mod': 'green',
+    'vip': 'gold',
+    'elder': 'purple',
+    'founder': 'gold',
+    'contributor': 'blue',
+    'verified': 'blue',
+    'premium': 'purple'
+  };
+  return themes[badge] || 'default';
 }
 
 /**
@@ -622,9 +668,12 @@ function showUserProfileModal(user) {
         ` : ''}
         
         ${!isGuest ? `
-          <div style="margin: 20px 0; text-align: center;">
+          <div style="margin: 20px 0; text-align: center; display: flex; gap: 10px; justify-content: center;">
             <button onclick="sendFriendRequestFromModal('${user.username}')" style="padding: 10px 20px; border-radius: 6px; background: #4CAF50; color: white; border: none; cursor: pointer; font-size: 1em;">
               Add Friend
+            </button>
+            <button onclick="blockUserFromModal('${user.username}', '${user._id}')" style="padding: 10px 20px; border-radius: 6px; background: #f44336; color: white; border: none; cursor: pointer; font-size: 1em;">
+              Block User
             </button>
           </div>
         ` : ''}
@@ -825,6 +874,47 @@ async function rejectFriendRequest(fromUserId) {
     await loadFriendRequests();
     
     alert('Friend request rejected');
+  } catch (error) {
+    alert('Error: ' + error.message);
+  }
+}
+
+/**
+ * Block user from profile modal
+ */
+async function blockUserFromModal(username, userId) {
+  if (!confirm(`Block ${username}? You will no longer see their messages.`)) return;
+  
+  try {
+    const token = getAuthToken();
+    const response = await fetch('/api/users/block', {
+      method: 'POST',
+      headers: {
+        'Authorization': `Bearer ${token}`,
+        'Content-Type': 'application/json'
+      },
+      body: JSON.stringify({ blockUserId: userId })
+    });
+    
+    if (!response.ok) {
+      const error = await response.json();
+      throw new Error(error.message || 'Failed to block user');
+    }
+    
+    alert(`${username} has been blocked`);
+    
+    // Close the modal
+    document.querySelector('.profile-modal')?.remove();
+    
+    // Store blocked user ID locally to filter messages
+    const blockedUsers = JSON.parse(localStorage.getItem('blockedUsers') || '[]');
+    if (!blockedUsers.includes(userId)) {
+      blockedUsers.push(userId);
+      localStorage.setItem('blockedUsers', JSON.stringify(blockedUsers));
+    }
+    
+    // Reload the page to hide their messages
+    location.reload();
   } catch (error) {
     alert('Error: ' + error.message);
   }
