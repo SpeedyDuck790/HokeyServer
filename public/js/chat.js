@@ -4,9 +4,6 @@
 const urlParams = new URLSearchParams(window.location.search);
 let currentRoom = urlParams.get('room') || 'global';
 
-// Username logic: use text box, fallback to 'Anon' if empty
-let username = localStorage.getItem('hokeyUsername') || '';
-
 // Track unread messages per room
 let unreadCounts = JSON.parse(localStorage.getItem('unreadCounts') || '{}');
 let lastMessages = JSON.parse(localStorage.getItem('lastMessages') || '{}');
@@ -16,71 +13,18 @@ let oldestMessageTimestamp = null;
 let isLoadingOlderMessages = false;
 let hasMoreMessages = true;
 
-window.addEventListener('DOMContentLoaded', () => {
-  // Initialize theme
-  initializeTheme();
-  
-  // Set theme selector to current theme
-  const themeSelector = document.getElementById('themeSelector');
-  if (themeSelector) {
-    themeSelector.value = getCurrentTheme();
-  }
-  
-  // Request notification permission
-  if ('Notification' in window && Notification.permission === 'default') {
-    Notification.requestPermission();
-  }
-  
-  const usernameInput = document.getElementById('usernameInput');
-  usernameInput.value = username;
-  usernameInput.addEventListener('input', function() {
-    username = usernameInput.value.trim();
-    localStorage.setItem('hokeyUsername', username);
-  });
-  
-  // Allow sending message with Enter key
-  document.getElementById('messageInput').addEventListener('keydown', function(event) {
-    if (event.key === 'Enter') {
-      sendMessage();
-    }
-  });
-  
-  // Emit typing event when user types
-  let typingTimer;
-  const typingTimeout = 2000; // Stop showing typing after 2 seconds of no input
-  
-  document.getElementById('messageInput').addEventListener('input', function() {
-    socket.emit('typing', { room: currentRoom, username: getCurrentUsername() });
-    clearTimeout(typingTimer);
-    typingTimer = setTimeout(() => {
-      socket.emit('stop typing', { room: currentRoom });
-    }, typingTimeout);
-  });
-  
-  // Close dropdown when clicking outside
-  document.addEventListener('click', function(event) {
-    const menu = document.getElementById('roomDropdown');
-    const button = document.getElementById('roomMenuToggle');
-    if (!menu.contains(event.target) && event.target !== button) {
-      menu.style.display = 'none';
-    }
-  });
-  
-  // Infinite scroll - load older messages when scrolling to top
-  const messagesDiv = document.getElementById('messages');
-  messagesDiv.addEventListener('scroll', function() {
-    if (messagesDiv.scrollTop === 0 && !isLoadingOlderMessages && hasMoreMessages) {
-      loadOlderMessages();
-    }
-  });
-});
+// Socket.io connection and user state
+let socket;
+let currentUser = null;
 
 /**
- * Get the current username from input or return 'Anon'
+ * Get the current username from authenticated user
  */
 function getCurrentUsername() {
-  const val = document.getElementById('usernameInput').value.trim();
-  return val ? val : 'Anon';
+  if (currentUser && currentUser.username) {
+    return currentUser.username;
+  }
+  return 'Guest';
 }
 
 /**
@@ -141,12 +85,22 @@ function formatRelativeTime(timestamp) {
   }
 }
 
-// Socket.io connection
-let socket;
-let currentUser = null;
-
 // Initialize app
 document.addEventListener('DOMContentLoaded', async () => {
+  // Initialize theme
+  initializeTheme();
+  
+  // Set theme selector to current theme
+  const themeSelector = document.getElementById('themeSelector');
+  if (themeSelector) {
+    themeSelector.value = getCurrentTheme();
+  }
+  
+  // Request notification permission
+  if ('Notification' in window && Notification.permission === 'default') {
+    Notification.requestPermission();
+  }
+
   // Initialize authentication first
   currentUser = await initAuth();
   
@@ -172,6 +126,44 @@ document.addEventListener('DOMContentLoaded', async () => {
   // Load rooms and other initialization
   loadRooms();
   updateRoomTitle();
+
+  // Allow sending message with Enter key
+  document.getElementById('messageInput').addEventListener('keydown', function(event) {
+    if (event.key === 'Enter') {
+      sendMessage();
+    }
+  });
+  
+  // Emit typing event when user types
+  let typingTimer;
+  const typingTimeout = 2000; // Stop showing typing after 2 seconds of no input
+  
+  document.getElementById('messageInput').addEventListener('input', function() {
+    if (socket) {
+      socket.emit('typing', { room: currentRoom, username: getCurrentUsername() });
+      clearTimeout(typingTimer);
+      typingTimer = setTimeout(() => {
+        socket.emit('stop typing', { room: currentRoom });
+      }, typingTimeout);
+    }
+  });
+  
+  // Close dropdown when clicking outside
+  document.addEventListener('click', function(event) {
+    const menu = document.getElementById('roomDropdown');
+    const button = document.getElementById('roomMenuToggle');
+    if (!menu.contains(event.target) && event.target !== button) {
+      menu.style.display = 'none';
+    }
+  });
+  
+  // Infinite scroll - load older messages when scrolling to top
+  const messagesDiv = document.getElementById('messages');
+  messagesDiv.addEventListener('scroll', function() {
+    if (messagesDiv.scrollTop === 0 && !isLoadingOlderMessages && hasMoreMessages) {
+      loadOlderMessages();
+    }
+  });
 });
 
 // Typing indicator management
