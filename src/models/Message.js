@@ -3,6 +3,12 @@ const mongoose = require('mongoose');
 // the Message schema defines the structure of chat messages in the database
 // It includes fields for username, message content, timestamp, room, message type, and edit status
 const messageSchema = new mongoose.Schema({
+    // User ID (for registered users) - nullable for backwards compatibility
+    userId: {
+        type: mongoose.Schema.Types.ObjectId,
+        ref: 'User',
+        required: false
+    },
     // Username of the message sender
     username: {
         type: String,
@@ -78,6 +84,7 @@ const messageSchema = new mongoose.Schema({
 // Index for faster queries
 messageSchema.index({ room: 1, timestamp: -1 });
 messageSchema.index({ username: 1, timestamp: -1 });
+messageSchema.index({ userId: 1, timestamp: -1 });
 
 // Static method to get recent messages
 // The static method in your model describes what it does: 

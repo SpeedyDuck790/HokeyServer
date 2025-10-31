@@ -1,5 +1,7 @@
 const roomService = require('../services/roomService');
 const chatService = require('../services/chatService');
+const User = require('../models/User');
+const { authenticateSocket } = require('../middleware/auth');
 
 // In-memory tracking for quick live state
 const onlineUsersByRoom = {};
@@ -15,10 +17,14 @@ function attachSocketHandlers(io, options = {}) {
   ioRef = io;
   const { getIsDbConnected = () => false, msgHistoryKept = true, USE_DATABASE = false } = options;
 
+  // Apply socket authentication middleware
+  io.use(authenticateSocket);
+
   io.on('connection', (socket) => {
-    console.log('A user connected');
+    console.log('A user connected:', socket.user ? socket.user.username : 'Guest');
     let currentRoom = null;
-    let currentUsername = null;
+    let currentUsername = socket.user ? socket.user.username : null;
+    let currentUserId = socket.user ? socket.user._id : null;
 
     // Listen for user joining a room
     socket.on('join room', async (data) => {
@@ -144,9 +150,19 @@ function attachSocketHandlers(io, options = {}) {
       if (
           typeof data.userMsg !== 'string' ||
           !data.userMsg.trim() ||
-          data.userMsg.length > 200
+          data.userMsg.length > 500
       ) {
           return; // Ignore invalid messages
+      }
+
+      // Check if user is blocked from sending messages
+      if (USE_DATABASE && currentUserId) {
+        try {
+          const user = await User.findById(currentUserId);
+          // Could add ban/mute checking here
+        } catch (error) {
+          console.error('Error checking user status:', error);
+        }
       }
 
       // Sanitize
@@ -183,7 +199,8 @@ function attachSocketHandlers(io, options = {}) {
                 username: data.username,
                 message: data.userMsg,
                 room: data.room,
-                messageType
+                messageType,
+                userId: currentUserId // Include userId if authenticated
               };
 
               // Add reply context if this is a reply
@@ -323,6 +340,20 @@ function attachSocketHandlers(io, options = {}) {
 
     // Handle client disconnection
     socket.on('disconnect', async () => {
+      // Update user status to offline if authenticated
+      if (currentUserId) {
+        try {
+          const user = await User.findById(currentUserId);
+          if (user) {
+            user.profile.status = 'offline';
+            user.lastSeen = new Date();
+            await user.save();
+          }
+        } catch (error) {
+          console.error('Error updating user status on disconnect:', error);
+        }
+      }
+
       if (currentRoom && onlineUsersByRoom[currentRoom]) {
         // Remove user from database if enabled
         if (USE_DATABASE && getIsDbConnected()) {
@@ -344,6 +375,42 @@ function attachSocketHandlers(io, options = {}) {
 
         // Clean, compact leave log
         console.log(`Leave|${currentUsername}|${currentRoom}|`);
+      }
+      
+      console.log('User disconnected:', currentUsername || 'Guest');
+    });
+
+    // User status update event
+    socket.on('update status', async (status) => {
+      if (!currentUserId) return;
+
+      try {
+        const user = await User.findById(currentUserId);
+        if (user) {
+          user.profile.status = status;
+          user.lastActivity = new Date();
+          await user.save();
+          
+          // Broadcast status change to friends
+          // TODO: Implement friend notification
+        }
+      } catch (error) {
+        console.error('Error updating user status:', error);
+      }
+    });
+
+    // User custom status update
+    socket.on('update custom status', async (customStatus) => {
+      if (!currentUserId) return;
+
+      try {
+        const user = await User.findById(currentUserId);
+        if (user) {
+          user.profile.customStatus = customStatus;
+          await user.save();
+        }
+      } catch (error) {
+        console.error('Error updating custom status:', error);
       }
     });
   });
