@@ -141,8 +141,14 @@ function displayUserProfile(user) {
     <div class="profile-info">
       <div class="profile-username" style="text-align: center; font-size: 1.2em; font-weight: bold; margin-bottom: 10px;">
         ${user.username}
-        ${!isGuest ? '<span style="color: #4CAF50;">✓</span>' : '<span style="opacity: 0.6;">(Guest)</span>'}
+        ${isGuest ? '<span style="opacity: 0.6;">(Guest)</span>' : ''}
       </div>
+      
+      ${!isGuest && user.email ? `
+        <div style="text-align: center; font-size: 0.9em; opacity: 0.7; margin-bottom: 10px;">
+          ${user.email}
+        </div>
+      ` : ''}
       
       ${isGuest ? `
         <button onclick="showUpgradeModal()" style="width: 100%; margin-bottom: 10px; background: #4CAF50;">
@@ -198,11 +204,39 @@ function displayUserProfile(user) {
         </div>
       ` : ''}
       
+      <hr style="border: none; border-top: 1px solid var(--border-color); margin: 15px 0;">
+      
+      <div class="profile-friends" style="margin-top: 15px;">
+        <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 10px;">
+          <label style="margin: 0;">Friends:</label>
+          <button onclick="showAddFriendModal()" style="padding: 4px 12px; border-radius: 4px; background: #4CAF50; color: white; border: none; cursor: pointer; font-size: 0.9em;">
+            ➕ Add Friend
+          </button>
+        </div>
+        <div id="friendsList" style="max-height: 150px; overflow-y: auto;">
+          <div style="text-align: center; opacity: 0.5; padding: 10px;">Loading friends...</div>
+        </div>
+      </div>
+      
+      <hr style="border: none; border-top: 1px solid var(--border-color); margin: 15px 0;">
+      
+      <div class="profile-settings" style="margin-top: 15px;">
+        <label style="display: block; margin-bottom: 10px;">Settings:</label>
+        <button onclick="showSettingsModal()" style="width: 100%; padding: 8px; border-radius: 6px; background: var(--button-bg); color: var(--text-color); border: 1px solid var(--border-color); cursor: pointer;">
+          ⚙️ Manage Settings
+        </button>
+      </div>
+      
       <div class="profile-joined" style="margin-top: 15px; font-size: 0.9em; opacity: 0.7; text-align: center;">
         Joined ${new Date(user.createdAt).toLocaleDateString()}
       </div>
     ` : ''}
   `;
+  
+  // Load friends list if user is not a guest
+  if (!isGuest) {
+    setTimeout(() => loadFriendsList(), 100);
+  }
 }
 
 /**
@@ -554,7 +588,7 @@ function showUserProfileModal(user) {
       <div class="profile-info">
         <div class="profile-username" style="text-align: center; font-size: 1.5em; font-weight: bold; margin-bottom: 10px;">
           ${user.username}
-          ${!isGuest ? '<span style="color: #4CAF50;">✓</span>' : '<span style="opacity: 0.6;">(Guest)</span>'}
+          ${isGuest ? '<span style="opacity: 0.6;">(Guest)</span>' : ''}
         </div>
         
         ${!isGuest && user.profile?.status ? `
@@ -607,3 +641,320 @@ function showUserProfileModal(user) {
     }
   });
 }
+
+/**
+ * Load and display friends list
+ */
+async function loadFriendsList() {
+  const friendsListEl = document.getElementById('friendsList');
+  if (!friendsListEl) return;
+  
+  try {
+    const token = getAuthToken();
+    if (!token) return;
+    
+    const response = await fetch('/api/users/friends', {
+      headers: {
+        'Authorization': `Bearer ${token}`
+      }
+    });
+    
+    if (!response.ok) {
+      throw new Error('Failed to load friends');
+    }
+    
+    const friends = await response.json();
+    
+    if (friends.length === 0) {
+      friendsListEl.innerHTML = '<div style="text-align: center; opacity: 0.5; padding: 10px;">No friends yet</div>';
+      return;
+    }
+    
+    // Get online friends
+    const onlineResponse = await fetch('/api/users/friends/online', {
+      headers: {
+        'Authorization': `Bearer ${token}`
+      }
+    });
+    
+    const onlineFriends = onlineResponse.ok ? await onlineResponse.json() : [];
+    const onlineUsernames = onlineFriends.map(f => f.username);
+    
+    friendsListEl.innerHTML = friends.map(friend => {
+      const isOnline = onlineUsernames.includes(friend.username);
+      return `
+        <div style="display: flex; align-items: center; gap: 8px; padding: 8px; border-radius: 6px; background: var(--input-bg); margin-bottom: 5px; cursor: pointer;" onclick="viewUserProfile('${friend.username}')">
+          <span style="font-size: 1.2em;">${isOnline ? '🟢' : '⚫'}</span>
+          <span style="flex: 1;">${escapeHtml(friend.username)}</span>
+        </div>
+      `;
+    }).join('');
+    
+  } catch (error) {
+    console.error('Error loading friends:', error);
+    friendsListEl.innerHTML = '<div style="text-align: center; opacity: 0.5; padding: 10px;">Error loading friends</div>';
+  }
+}
+
+/**
+ * Show add friend modal
+ */
+function showAddFriendModal() {
+  const modal = document.createElement('div');
+  modal.innerHTML = `
+    <div style="position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.7); display: flex; justify-content: center; align-items: center; z-index: 10000;">
+      <div style="background: var(--panel-bg); padding: 30px; border-radius: 12px; max-width: 400px; width: 90%; box-shadow: 0 4px 20px rgba(0,0,0,0.3);">
+        <h2 style="margin: 0 0 20px 0;">Add Friend</h2>
+        <input 
+          type="text" 
+          id="friendUsernameInput" 
+          placeholder="Enter username..."
+          style="width: 100%; padding: 10px; border-radius: 6px; background: var(--input-bg); color: var(--text-color); border: 1px solid var(--border-color); margin-bottom: 15px;"
+        >
+        <div id="addFriendError" style="color: #f44336; margin-bottom: 10px; display: none;"></div>
+        <div style="display: flex; gap: 10px;">
+          <button onclick="handleAddFriend()" style="flex: 1; padding: 10px; border-radius: 6px; background: #4CAF50; color: white; border: none; cursor: pointer;">
+            Add Friend
+          </button>
+          <button onclick="this.closest('div[style*=fixed]').parentElement.remove()" style="flex: 1; padding: 10px; border-radius: 6px; background: #666; color: white; border: none; cursor: pointer;">
+            Cancel
+          </button>
+        </div>
+      </div>
+    </div>
+  `;
+  document.body.appendChild(modal);
+  
+  // Focus input
+  setTimeout(() => {
+    document.getElementById('friendUsernameInput')?.focus();
+  }, 100);
+}
+
+/**
+ * Handle adding a friend
+ */
+async function handleAddFriend() {
+  const input = document.getElementById('friendUsernameInput');
+  const errorEl = document.getElementById('addFriendError');
+  const username = input.value.trim();
+  
+  if (!username) {
+    errorEl.textContent = 'Please enter a username';
+    errorEl.style.display = 'block';
+    return;
+  }
+  
+  try {
+    const token = getAuthToken();
+    const response = await fetch('/api/users/friends/request', {
+      method: 'POST',
+      headers: {
+        'Authorization': `Bearer ${token}`,
+        'Content-Type': 'application/json'
+      },
+      body: JSON.stringify({ username })
+    });
+    
+    if (!response.ok) {
+      const error = await response.json();
+      throw new Error(error.message || 'Failed to send friend request');
+    }
+    
+    // Close modal
+    document.querySelector('div[style*="fixed"]')?.parentElement.remove();
+    
+    // Reload friends list
+    await loadFriendsList();
+    
+    alert('Friend request sent!');
+  } catch (error) {
+    errorEl.textContent = error.message;
+    errorEl.style.display = 'block';
+  }
+}
+
+/**
+ * Show settings modal
+ */
+function showSettingsModal() {
+  const currentUser = JSON.parse(localStorage.getItem('hokeyCurrentUser') || '{}');
+  const settings = currentUser.settings || {};
+  
+  const modal = document.createElement('div');
+  modal.innerHTML = `
+    <div style="position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.7); display: flex; justify-content: center; align-items: center; z-index: 10000; overflow-y: auto; padding: 20px;">
+      <div style="background: var(--panel-bg); padding: 30px; border-radius: 12px; max-width: 500px; width: 90%; box-shadow: 0 4px 20px rgba(0,0,0,0.3); max-height: 90vh; overflow-y: auto;">
+        <h2 style="margin: 0 0 20px 0;">⚙️ Settings</h2>
+        
+        <div style="margin-bottom: 25px;">
+          <h3 style="margin: 0 0 10px 0; font-size: 1.1em;">🔔 Notifications</h3>
+          <label style="display: flex; align-items: center; gap: 10px; margin-bottom: 8px; cursor: pointer;">
+            <input type="checkbox" id="notifMessages" ${settings.notifications?.messages !== false ? 'checked' : ''}>
+            <span>Message notifications</span>
+          </label>
+          <label style="display: flex; align-items: center; gap: 10px; margin-bottom: 8px; cursor: pointer;">
+            <input type="checkbox" id="notifFriendRequests" ${settings.notifications?.friendRequests !== false ? 'checked' : ''}>
+            <span>Friend request notifications</span>
+          </label>
+          <label style="display: flex; align-items: center; gap: 10px; cursor: pointer;">
+            <input type="checkbox" id="notifSounds" ${settings.notifications?.sounds !== false ? 'checked' : ''}>
+            <span>Sound effects</span>
+          </label>
+        </div>
+        
+        <hr style="border: none; border-top: 1px solid var(--border-color); margin: 20px 0;">
+        
+        <div style="margin-bottom: 25px;">
+          <h3 style="margin: 0 0 10px 0; font-size: 1.1em;">🔒 Privacy</h3>
+          <label style="display: flex; align-items: center; gap: 10px; margin-bottom: 8px; cursor: pointer;">
+            <input type="checkbox" id="privacyShowStatus" ${settings.privacy?.showStatus !== false ? 'checked' : ''}>
+            <span>Show online status</span>
+          </label>
+          <label style="display: flex; align-items: center; gap: 10px; cursor: pointer;">
+            <input type="checkbox" id="privacyShowLastSeen" ${settings.privacy?.showLastSeen !== false ? 'checked' : ''}>
+            <span>Show last seen</span>
+          </label>
+        </div>
+        
+        <hr style="border: none; border-top: 1px solid var(--border-color); margin: 20px 0;">
+        
+        <div style="margin-bottom: 25px;">
+          <h3 style="margin: 0 0 10px 0; font-size: 1.1em;">🚫 Blocked Users</h3>
+          <div id="blockedUsersList" style="max-height: 150px; overflow-y: auto; margin-bottom: 10px;">
+            <div style="text-align: center; opacity: 0.5; padding: 10px;">Loading...</div>
+          </div>
+        </div>
+        
+        <div id="settingsError" style="color: #f44336; margin-bottom: 10px; display: none;"></div>
+        
+        <div style="display: flex; gap: 10px;">
+          <button onclick="handleSaveSettings()" style="flex: 1; padding: 10px; border-radius: 6px; background: #4CAF50; color: white; border: none; cursor: pointer;">
+            💾 Save Settings
+          </button>
+          <button onclick="this.closest('div[style*=fixed]').parentElement.remove()" style="flex: 1; padding: 10px; border-radius: 6px; background: #666; color: white; border: none; cursor: pointer;">
+            Cancel
+          </button>
+        </div>
+      </div>
+    </div>
+  `;
+  document.body.appendChild(modal);
+  
+  // Load blocked users
+  loadBlockedUsers();
+}
+
+/**
+ * Load blocked users
+ */
+async function loadBlockedUsers() {
+  const blockedListEl = document.getElementById('blockedUsersList');
+  if (!blockedListEl) return;
+  
+  try {
+    const token = getAuthToken();
+    const response = await fetch('/api/users/blocked', {
+      headers: {
+        'Authorization': `Bearer ${token}`
+      }
+    });
+    
+    if (!response.ok) throw new Error('Failed to load blocked users');
+    
+    const blockedUsers = await response.json();
+    
+    if (blockedUsers.length === 0) {
+      blockedListEl.innerHTML = '<div style="text-align: center; opacity: 0.5; padding: 10px;">No blocked users</div>';
+      return;
+    }
+    
+    blockedListEl.innerHTML = blockedUsers.map(user => `
+      <div style="display: flex; align-items: center; justify-content: space-between; padding: 8px; border-radius: 6px; background: var(--input-bg); margin-bottom: 5px;">
+        <span>${escapeHtml(user.username)}</span>
+        <button onclick="handleUnblockUser('${user.username}')" style="padding: 4px 10px; border-radius: 4px; background: #f44336; color: white; border: none; cursor: pointer; font-size: 0.9em;">
+          Unblock
+        </button>
+      </div>
+    `).join('');
+    
+  } catch (error) {
+    console.error('Error loading blocked users:', error);
+    blockedListEl.innerHTML = '<div style="text-align: center; opacity: 0.5; padding: 10px;">Error loading blocked users</div>';
+  }
+}
+
+/**
+ * Handle saving settings
+ */
+async function handleSaveSettings() {
+  const errorEl = document.getElementById('settingsError');
+  
+  try {
+    const settings = {
+      notifications: {
+        messages: document.getElementById('notifMessages').checked,
+        friendRequests: document.getElementById('notifFriendRequests').checked,
+        sounds: document.getElementById('notifSounds').checked
+      },
+      privacy: {
+        showStatus: document.getElementById('privacyShowStatus').checked,
+        showLastSeen: document.getElementById('privacyShowLastSeen').checked
+      }
+    };
+    
+    const token = getAuthToken();
+    const response = await fetch('/api/users/settings', {
+      method: 'PATCH',
+      headers: {
+        'Authorization': `Bearer ${token}`,
+        'Content-Type': 'application/json'
+      },
+      body: JSON.stringify({ settings })
+    });
+    
+    if (!response.ok) {
+      throw new Error('Failed to save settings');
+    }
+    
+    // Update local user data
+    const currentUser = JSON.parse(localStorage.getItem('hokeyCurrentUser') || '{}');
+    currentUser.settings = settings;
+    localStorage.setItem('hokeyCurrentUser', JSON.stringify(currentUser));
+    
+    // Close modal
+    document.querySelector('div[style*="fixed"]')?.parentElement.remove();
+    
+    alert('Settings saved successfully!');
+  } catch (error) {
+    errorEl.textContent = error.message;
+    errorEl.style.display = 'block';
+  }
+}
+
+/**
+ * Handle unblocking a user
+ */
+async function handleUnblockUser(username) {
+  if (!confirm(`Unblock ${username}?`)) return;
+  
+  try {
+    const token = getAuthToken();
+    const response = await fetch(`/api/users/block/${encodeURIComponent(username)}`, {
+      method: 'DELETE',
+      headers: {
+        'Authorization': `Bearer ${token}`
+      }
+    });
+    
+    if (!response.ok) {
+      throw new Error('Failed to unblock user');
+    }
+    
+    // Reload blocked users list
+    await loadBlockedUsers();
+  } catch (error) {
+    alert('Error: ' + error.message);
+  }
+}
+
