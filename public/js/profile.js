@@ -617,9 +617,29 @@ async function viewUserProfile(username) {
 /**
  * Show user profile in a modal
  */
-function showUserProfileModal(user) {
+async function showUserProfileModal(user) {
   const isGuest = user.isGuest;
   const avatarUrl = user.profile?.avatar || `https://ui-avatars.com/api/?name=${encodeURIComponent(user.username)}&background=random`;
+  
+  // Get current user to check if viewing own profile
+  const currentUser = JSON.parse(localStorage.getItem('hokeyCurrentUser') || '{}');
+  const isOwnProfile = currentUser.username === user.username;
+  
+  // Check if already friends
+  let isFriend = false;
+  if (!isOwnProfile && !isGuest && currentUser._id) {
+    try {
+      const response = await fetch('/api/users/friends', {
+        headers: getAuthHeaders()
+      });
+      if (response.ok) {
+        const friends = await response.json();
+        isFriend = friends.some(f => f._id === user._id);
+      }
+    } catch (error) {
+      console.error('Error checking friend status:', error);
+    }
+  }
 
   const modal = document.createElement('div');
   modal.style.cssText = `
@@ -655,9 +675,9 @@ function showUserProfileModal(user) {
         ${!isGuest && user.profile?.status ? `
           <div style="text-align: center; margin-bottom: 10px;">
             <span style="font-size: 1.2em;">
-              ${user.profile.status === 'online' ? '🟢' : user.profile.status === 'away' ? '🟡' : user.profile.status === 'dnd' ? '🔴' : '⚫'}
+              ${user.profile.status === 'online' ? '🟢' : user.profile.status === 'away' ? '🟡' : user.profile.status === 'dnd' ? '🔴' : user.profile.status === 'offline' ? '⚫' : user.profile.status === 'invisible' ? '⚫' : '⚫'}
             </span>
-            <span style="text-transform: capitalize;">${user.profile.status}</span>
+            <span style="text-transform: capitalize;">${user.profile.status === 'invisible' ? 'Offline' : user.profile.status}</span>
           </div>
         ` : ''}
         
@@ -667,11 +687,17 @@ function showUserProfileModal(user) {
           </div>
         ` : ''}
         
-        ${!isGuest ? `
+        ${!isGuest && !isOwnProfile ? `
           <div style="margin: 20px 0; text-align: center; display: flex; gap: 10px; justify-content: center;">
-            <button onclick="sendFriendRequestFromModal('${user.username}')" style="padding: 10px 20px; border-radius: 6px; background: #4CAF50; color: white; border: none; cursor: pointer; font-size: 1em;">
-              Add Friend
-            </button>
+            ${isFriend ? `
+              <button onclick="removeFriendFromModal('${user._id}', '${user.username}')" style="padding: 10px 20px; border-radius: 6px; background: #ff9800; color: white; border: none; cursor: pointer; font-size: 1em;">
+                Unfriend
+              </button>
+            ` : `
+              <button onclick="sendFriendRequestFromModal('${user.username}')" style="padding: 10px 20px; border-radius: 6px; background: #4CAF50; color: white; border: none; cursor: pointer; font-size: 1em;">
+                Add Friend
+              </button>
+            `}
             <button onclick="blockUserFromModal('${user.username}', '${user._id}')" style="padding: 10px 20px; border-radius: 6px; background: #f44336; color: white; border: none; cursor: pointer; font-size: 1em;">
               Block User
             </button>
@@ -874,6 +900,38 @@ async function rejectFriendRequest(fromUserId) {
     await loadFriendRequests();
     
     alert('Friend request rejected');
+  } catch (error) {
+    alert('Error: ' + error.message);
+  }
+}
+
+/**
+ * Remove friend from profile modal
+ */
+async function removeFriendFromModal(friendId, username) {
+  if (!confirm(`Unfriend ${username}?`)) return;
+  
+  try {
+    const token = getAuthToken();
+    const response = await fetch(`/api/users/friends/${friendId}`, {
+      method: 'DELETE',
+      headers: {
+        'Authorization': `Bearer ${token}`
+      }
+    });
+    
+    if (!response.ok) {
+      const error = await response.json();
+      throw new Error(error.message || 'Failed to remove friend');
+    }
+    
+    alert(`${username} has been removed from your friends`);
+    
+    // Close the modal
+    document.querySelector('.profile-modal')?.remove();
+    
+    // Reload friends list
+    await loadFriendsList();
   } catch (error) {
     alert('Error: ' + error.message);
   }

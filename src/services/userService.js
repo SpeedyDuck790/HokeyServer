@@ -31,7 +31,7 @@ class UserService {
   async getUserByUsername(username) {
     try {
       const user = await User.findOne({ username })
-        .select('username displayName profile createdAt lastSeen role');
+        .select('username profile createdAt lastSeen role isGuest');
       
       if (!user) {
         throw new Error('User not found');
@@ -316,7 +316,7 @@ class UserService {
   async getFriends(userId) {
     try {
       const user = await User.findById(userId)
-        .populate('friends', 'username displayName profile.avatar profile.status lastSeen');
+        .populate('friends', 'username profile.avatar profile.status lastSeen');
       
       if (!user) {
         throw new Error('User not found');
@@ -340,7 +340,7 @@ class UserService {
             'profile.status': { $in: ['online', 'away', 'dnd'] },
             lastActivity: { $gte: new Date(Date.now() - 5 * 60 * 1000) }
           },
-          select: 'username displayName profile.avatar profile.status'
+          select: 'username profile.avatar profile.status'
         });
       
       if (!user) {
