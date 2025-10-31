@@ -189,6 +189,18 @@
   min-height: 20px;
 }
 
+/* Loading indicator for infinite scroll */
+.loading-indicator {
+  padding: 12px;
+  text-align: center;
+  font-size: 0.9em;
+  color: #666;
+  font-style: italic;
+  background: rgba(0, 0, 0, 0.05);
+  border-radius: 4px;
+  margin-bottom: 8px;
+}
+
 /* Message reactions */
 .message-reactions {
   display: flex;

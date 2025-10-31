@@ -38,6 +38,24 @@ button:hover {
   opacity: 0.8;
 }
 
+/* Font Size Button - shows current size indicator */
+#fontSizeToggle {
+  font-weight: bold;
+  min-width: 44px;
+  font-size: 1.2em;
+  position: relative;
+  padding: 6px 12px;
+}
+
+#fontSizeToggle::after {
+  content: attr(data-size);
+  position: absolute;
+  bottom: 2px;
+  right: 4px;
+  font-size: 0.5em;
+  opacity: 0.6;
+}
+
 /* Back to lobby button */
 .back-button {
   background: transparent;

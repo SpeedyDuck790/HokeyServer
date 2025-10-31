@@ -3,6 +3,37 @@
   Main page structure, containers, and positioning
 */
 
+/* === Font Size Classes === */
+body.font-small {
+  font-size: 14px;
+}
+
+body.font-medium {
+  font-size: 16px; /* Default */
+}
+
+body.font-large {
+  font-size: 18px;
+}
+
+/* Adjust specific elements for different font sizes */
+body.font-small .message {
+  font-size: 0.95em;
+}
+
+body.font-large .message {
+  font-size: 1.05em;
+}
+
+body.font-small .username {
+  font-size: 0.9em;
+}
+
+body.font-large .username {
+  font-size: 1.05em;
+}
+
+/* === Main Layout === */
 body {
   background: var(--bg-color);
   color: var(--text-color);
@@ -21,6 +52,117 @@ body {
   flex-direction: column;
   height: 100vh;
   max-height: 100vh;
+}
+
+/* === Sidebar Layout === */
+.app-wrapper {
+  display: flex;
+  gap: 0;
+  height: 100vh;
+  overflow: hidden;
+  width: 100vw;
+}
+
+.sidebar {
+  width: 20%; /* 1/5th of the screen */
+  background: var(--user-list-bg);
+  padding: 15px;
+  overflow-y: auto;
+  flex-shrink: 0;
+  box-shadow: inset -1px 0 0 var(--border-color);
+}
+
+.sidebar h3 {
+  margin: 0 0 15px 0;
+  font-size: 1.1em;
+  color: var(--text-color);
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+}
+
+.sidebar-toggle {
+  background: transparent;
+  border: none;
+  font-size: 1.2em;
+  cursor: pointer;
+  padding: 4px 8px;
+  color: var(--text-color);
+  opacity: 0.7;
+}
+
+.sidebar-toggle:hover {
+  opacity: 1;
+}
+
+.sidebar.collapsed {
+  width: 50px;
+  padding: 15px 5px;
+}
+
+.sidebar.collapsed h3 span {
+  display: none;
+}
+
+.sidebar.collapsed .recent-room {
+  padding: 8px;
+  text-align: center;
+}
+
+.sidebar.collapsed .recent-room-name,
+.sidebar.collapsed .recent-room-time {
+  display: none;
+}
+
+.recent-rooms-list {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.recent-room {
+  padding: 10px;
+  background: var(--bg-color);
+  border-radius: 6px;
+  cursor: pointer;
+  transition: all 0.2s ease;
+  border: 1px solid var(--border-color);
+}
+
+.recent-room:hover {
+  background: var(--button-hover);
+  transform: translateX(5px);
+}
+
+.recent-room-name {
+  font-weight: bold;
+  margin-bottom: 4px;
+  color: var(--text-color);
+}
+
+.recent-room-time {
+  font-size: 0.85em;
+  opacity: 0.7;
+  color: var(--text-color);
+}
+
+/* Right sidebar - placeholder for future features */
+.sidebar-right {
+  width: 20%; /* 1/5th of the screen */
+  background: var(--user-list-bg);
+  padding: 15px;
+  overflow-y: auto;
+  flex-shrink: 0;
+  box-shadow: inset 1px 0 0 var(--border-color);
+}
+
+.main-content {
+  width: 60%; /* 3/5ths of the screen */
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+  max-width: 60%;
 }
 
 /* Lobby container */

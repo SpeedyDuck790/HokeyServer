@@ -11,9 +11,20 @@ let username = localStorage.getItem('hokeyUsername') || '';
 let unreadCounts = JSON.parse(localStorage.getItem('unreadCounts') || '{}');
 let lastMessages = JSON.parse(localStorage.getItem('lastMessages') || '{}');
 
+// Infinite scroll variables
+let oldestMessageTimestamp = null;
+let isLoadingOlderMessages = false;
+let hasMoreMessages = true;
+
 window.addEventListener('DOMContentLoaded', () => {
   // Initialize theme
   initializeTheme();
+  
+  // Set theme selector to current theme
+  const themeSelector = document.getElementById('themeSelector');
+  if (themeSelector) {
+    themeSelector.value = getCurrentTheme();
+  }
   
   // Request notification permission
   if ('Notification' in window && Notification.permission === 'default') {
@@ -54,6 +65,14 @@ window.addEventListener('DOMContentLoaded', () => {
       menu.style.display = 'none';
     }
   });
+  
+  // Infinite scroll - load older messages when scrolling to top
+  const messagesDiv = document.getElementById('messages');
+  messagesDiv.addEventListener('scroll', function() {
+    if (messagesDiv.scrollTop === 0 && !isLoadingOlderMessages && hasMoreMessages) {
+      loadOlderMessages();
+    }
+  });
 });
 
 /**
@@ -62,6 +81,36 @@ window.addEventListener('DOMContentLoaded', () => {
 function getCurrentUsername() {
   const val = document.getElementById('usernameInput').value.trim();
   return val ? val : 'Anon';
+}
+
+/**
+ * Load older messages for infinite scroll
+ */
+async function loadOlderMessages() {
+  if (!oldestMessageTimestamp || isLoadingOlderMessages || !hasMoreMessages) return;
+  
+  isLoadingOlderMessages = true;
+  const messagesDiv = document.getElementById('messages');
+  const scrollHeight = messagesDiv.scrollHeight;
+  
+  try {
+    // Show loading indicator
+    const loader = document.createElement('div');
+    loader.className = 'loading-indicator';
+    loader.textContent = 'Loading older messages...';
+    messagesDiv.insertBefore(loader, messagesDiv.firstChild);
+    
+    // Request older messages from server
+    socket.emit('load older messages', {
+      room: currentRoom,
+      before: oldestMessageTimestamp,
+      limit: 20
+    });
+    
+  } catch (error) {
+    console.error('Error loading older messages:', error);
+    isLoadingOlderMessages = false;
+  }
 }
 
 /**
@@ -270,6 +319,11 @@ function switchRoom(roomName, hasPassword, knownPassword) {
     username: getCurrentUsername(),
     password: knownPassword 
   });
+
+  // Add to recent rooms sidebar
+  if (typeof addToRecentRooms === 'function') {
+    addToRecentRooms(roomName);
+  }
 
   // Clear messages
   document.getElementById('messages').innerHTML = '';
@@ -517,9 +571,45 @@ socket.on('message history', function(history) {
   messagesDiv.innerHTML = '';
   history.forEach(function(data) {
     displayMessage(data);
+    // Track oldest timestamp for infinite scroll
+    if (data.timestamp && (!oldestMessageTimestamp || data.timestamp < oldestMessageTimestamp)) {
+      oldestMessageTimestamp = data.timestamp;
+    }
   });
   // Scroll to bottom
   messagesDiv.scrollTop = messagesDiv.scrollHeight;
+});
+
+// Listen for older messages (infinite scroll)
+socket.on('older messages', function(data) {
+  const messagesDiv = document.getElementById('messages');
+  const scrollHeight = messagesDiv.scrollHeight;
+  
+  // Remove loading indicator
+  const loader = messagesDiv.querySelector('.loading-indicator');
+  if (loader) loader.remove();
+  
+  if (data.messages && data.messages.length > 0) {
+    // Prepend older messages
+    data.messages.reverse().forEach(function(msg) {
+      const firstMessage = messagesDiv.firstChild;
+      const msgElem = createMessageElement(msg);
+      messagesDiv.insertBefore(msgElem, firstMessage);
+      
+      // Update oldest timestamp
+      if (msg.timestamp && (!oldestMessageTimestamp || msg.timestamp < oldestMessageTimestamp)) {
+        oldestMessageTimestamp = msg.timestamp;
+      }
+    });
+    
+    // Maintain scroll position
+    const newScrollHeight = messagesDiv.scrollHeight;
+    messagesDiv.scrollTop = newScrollHeight - scrollHeight;
+  } else {
+    hasMoreMessages = false;
+  }
+  
+  isLoadingOlderMessages = false;
 });
 
 // Listen for messages from the server
@@ -661,10 +751,9 @@ socket.on('reaction update', function(data) {
 });
 
 /**
- * Display a message in the chat
+ * Create a message element (helper for displayMessage and infinite scroll)
  */
-function displayMessage(data) {
-  const messagesDiv = document.getElementById('messages');
+function createMessageElement(data) {
   const msgElem = document.createElement('div');
   msgElem.className = 'message';
   if (data.messageType === 'reply') {
@@ -691,7 +780,7 @@ function displayMessage(data) {
   }
   
   // Message content
-  const linkedMessage = linkifyText(escapeHtml(data.userMsg));
+  const linkedMessage = linkifyText(escapeHtml(data.userMsg || data.message));
   const messageId = data._id || data.timestamp;
   
   messageHTML += `
@@ -703,7 +792,7 @@ function displayMessage(data) {
       <button class="message-reply-btn" onclick='replyToMessage(${JSON.stringify({
         messageId: messageId,
         username: data.username,
-        userMsg: data.userMsg,
+        userMsg: data.userMsg || data.message,
         timestamp: data.timestamp
       }).replace(/'/g, "&apos;")})' title="Reply to this message">↩</button>
     </div>
@@ -727,8 +816,18 @@ function displayMessage(data) {
   
   msgElem.innerHTML = messageHTML;
   msgElem.dataset.messageId = messageId;
+  return msgElem;
+}
+
+/**
+ * Display a message in the chat
+ */
+function displayMessage(data) {
+  const messagesDiv = document.getElementById('messages');
+  const msgElem = createMessageElement(data);
   messagesDiv.appendChild(msgElem);
 }
+
 
 // On connect, join the room (prompt for password if needed)
 socket.on('connect', async function() {

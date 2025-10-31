@@ -7,7 +7,21 @@
   <link rel="stylesheet" href="/css/main.css">
 </head>
 <body>
-  <div class="chat-container">
+  <div class="app-wrapper">
+    <!-- Sidebar for recently visited rooms -->
+    <aside class="sidebar" id="roomSidebar">
+      <h3>
+        <span>Recent Rooms</span>
+        <button class="sidebar-toggle" onclick="toggleSidebar()" title="Toggle sidebar">◀</button>
+      </h3>
+      <div class="recent-rooms-list" id="recentRoomsList">
+        <!-- Recent rooms will be populated here -->
+      </div>
+    </aside>
+
+    <!-- Main chat content -->
+    <div class="main-content">
+      <div class="chat-container">
     <!-- Main Page Title and Subtitle-->
     <div class="header">
       <h1><span class="hokey">Hokey</span><span class="chat" id="roomTitle">Chat</span></h1>
@@ -18,7 +32,17 @@
 
       <!-- Settings menu and username input -->
       <div style="display: flex; align-items: center; gap: 10px;">
+        <button id="fontSizeToggle" onclick="cycleFontSize()" title="Change font size">A</button>
         <button id="themeToggle" onclick="toggleTheme()" title="Toggle light/dark mode">🌙</button>
+        <select id="themeSelector" onchange="applyTheme(this.value)" title="Select theme" style="padding: 8px; border-radius: 6px; border: 1px solid #ccc; background: var(--bg-color); color: var(--text-color);">
+          <option value="dark">Dark</option>
+          <option value="light">Light</option>
+          <option value="blue">Ocean Blue</option>
+          <option value="purple">Purple Haze</option>
+          <option value="green">Forest Green</option>
+          <option value="sunset">Sunset Orange</option>
+          <option value="midnight">Midnight</option>
+        </select>
         <button id="roomMenuToggle" onclick="toggleRoomMenu()" title="Show/Hide Rooms">🏠 Rooms ▼</button>
         <div class="username-box" style="position: static; background: none; box-shadow: none; padding: 0; border-radius: 0;">
           <label for="usernameInput" style="font-size: 0.95em;">Username:</label>
@@ -88,11 +112,15 @@
       <input id="messageInput" type="text" placeholder="Type a message..." />
       <button onclick="sendMessage()">Send</button>
     </div>
-  </div>
+      </div> <!-- end chat-container -->
+    </div> <!-- end main-content -->
+  </div> <!-- end app-wrapper -->
 
   <!-- Include Socket.io client library -->
   <script src="/socket.io/socket.io.js"></script>
   <script src="/js/notification-sound.js"></script>
+  <script src="/js/fontsize.js"></script>
+  <script src="/js/sidebar.js"></script>
   <script src="/js/theme.js"></script>
   <script src="/js/chat.js"></script>
 </body>

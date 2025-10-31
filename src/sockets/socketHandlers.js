@@ -283,6 +283,44 @@ function attachSocketHandlers(io, options = {}) {
       }
     });
 
+    // Handle loading older messages (infinite scroll)
+    socket.on('load older messages', async (data) => {
+      const { room, before, limit = 20 } = data;
+      
+      if (USE_DATABASE && getIsDbConnected()) {
+        try {
+          const Message = require('../models/Message');
+          const messages = await Message.find({
+            room: room,
+            timestamp: { $lt: new Date(before) }
+          })
+          .sort({ timestamp: -1 })
+          .limit(limit)
+          .exec();
+          
+          // Convert to plain objects
+          const formattedMessages = messages.map(msg => {
+            const obj = msg.toObject ? msg.toObject() : msg;
+            const reactions = obj.reactions ? Object.fromEntries(obj.reactions) : {};
+            return {
+              ...obj,
+              _id: obj._id ? obj._id.toString() : undefined,
+              userMsg: obj.message,
+              reactions: reactions
+            };
+          });
+          
+          socket.emit('older messages', {
+            room,
+            messages: formattedMessages
+          });
+        } catch (error) {
+          console.error('Error loading older messages:', error.message);
+          socket.emit('older messages', { room, messages: [] });
+        }
+      }
+    });
+
     // Handle client disconnection
     socket.on('disconnect', async () => {
       if (currentRoom && onlineUsersByRoom[currentRoom]) {
