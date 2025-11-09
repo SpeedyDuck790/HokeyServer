@@ -182,11 +182,28 @@ class AdminController {
       // Delete all messages in the room
       await Message.deleteMany({ room: room.name });
       
-      // Remove room roles from users
-      await User.updateMany(
-        { 'roomRoles.roomId': room._id },
-        { $pull: { roomRoles: { roomId: room._id } } }
-      );
+      // Get all users with roles in this room before deletion
+      const usersWithRoles = await User.find({ 'roomRoles.roomId': room._id });
+      
+      // Remove room roles from users and clean up badges
+      for (const user of usersWithRoles) {
+        // Remove the room role
+        user.roomRoles = user.roomRoles.filter(r => !r.roomId.equals(room._id));
+        
+        // Check if user still has any admin roles
+        const hasAdminRoles = user.roomRoles.some(r => r.role === 'admin');
+        if (!hasAdminRoles) {
+          user.profile.badges = user.profile.badges.filter(b => b !== 'chat-admin');
+        }
+        
+        // Check if user still has any moderator roles
+        const hasModRoles = user.roomRoles.some(r => r.role === 'moderator');
+        if (!hasModRoles) {
+          user.profile.badges = user.profile.badges.filter(b => b !== 'chat-mod');
+        }
+        
+        await user.save();
+      }
       
       // Delete the room
       await Room.findByIdAndDelete(roomId);
